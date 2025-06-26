@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -81,16 +80,23 @@ const Profile = () => {
   }, [user]);
 
   const handleViewDetails = (device: Device) => {
+    console.log('Viewing details for device:', device);
     setSelectedDevice(device);
     setShowDeviceDetails(true);
   };
 
   const handleDecommissionDevice = async () => {
-    if (!selectedDevice) return;
+    if (!selectedDevice) {
+      console.log('No device selected for decommission');
+      return;
+    }
     
+    console.log('Starting decommission process for device:', selectedDevice.device_id);
     setDecommissioningDevice(true);
+    
     try {
-      await axios.patch(
+      console.log('Making API call to decommission device');
+      const response = await axios.patch(
         `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`,
         {
           decommission_details: 'Decommissioned via user interface'
@@ -100,9 +106,11 @@ const Profile = () => {
         }
       );
 
+      console.log('Decommission API response:', response.data);
+
       // Update the device in the local state
-      setDevices(prevDevices => 
-        prevDevices.map(device => 
+      setDevices(prevDevices => {
+        const updatedDevices = prevDevices.map(device => 
           device.device_id === selectedDevice.device_id 
             ? { 
                 ...device, 
@@ -112,17 +120,23 @@ const Profile = () => {
                 decommission_details: 'Decommissioned via user interface'
               }
             : device
-        )
-      );
+        );
+        console.log('Updated devices list:', updatedDevices);
+        return updatedDevices;
+      });
 
       // Update selected device as well
-      setSelectedDevice(prev => prev ? {
-        ...prev,
-        status: 'decommissioned',
-        decommissioned_on: new Date().toISOString(),
-        decommissioned_by: user?.name || 'Unknown',
-        decommission_details: 'Decommissioned via user interface'
-      } : null);
+      setSelectedDevice(prev => {
+        const updatedDevice = prev ? {
+          ...prev,
+          status: 'decommissioned',
+          decommissioned_on: new Date().toISOString(),
+          decommissioned_by: user?.name || 'Unknown',
+          decommission_details: 'Decommissioned via user interface'
+        } : null;
+        console.log('Updated selected device:', updatedDevice);
+        return updatedDevice;
+      });
 
       toast({
         title: 'Device Decommissioned',
@@ -547,7 +561,10 @@ const Profile = () => {
                 {selectedDevice.status === 'active' ? (
                   <Button
                     variant="destructive"
-                    onClick={() => setShowDecommissionConfirm(true)}
+                    onClick={() => {
+                      console.log('Opening decommission confirmation modal');
+                      setShowDecommissionConfirm(true);
+                    }}
                     className="flex-1"
                   >
                     <AlertTriangle className="mr-2 h-4 w-4" />
@@ -581,7 +598,10 @@ const Profile = () => {
         {/* Decommission Confirmation Modal */}
         <Modal
           isOpen={showDecommissionConfirm}
-          onClose={() => setShowDecommissionConfirm(false)}
+          onClose={() => {
+            console.log('Closing decommission confirmation modal');
+            setShowDecommissionConfirm(false);
+          }}
           title="Confirm Decommission"
         >
           <div className="space-y-4">
@@ -599,7 +619,10 @@ const Profile = () => {
             <div className="flex space-x-3 pt-4">
               <Button
                 variant="destructive"
-                onClick={handleDecommissionDevice}
+                onClick={() => {
+                  console.log('User confirmed decommission');
+                  handleDecommissionDevice();
+                }}
                 disabled={decommissioningDevice}
                 className="flex-1"
               >
@@ -607,7 +630,10 @@ const Profile = () => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowDecommissionConfirm(false)}
+                onClick={() => {
+                  console.log('User cancelled decommission');
+                  setShowDecommissionConfirm(false);
+                }}
                 disabled={decommissioningDevice}
                 className="flex-1"
               >
