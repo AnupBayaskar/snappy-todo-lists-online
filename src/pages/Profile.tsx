@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -6,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
+import Modal from '@/components/ui/modal';
+import { useToast } from '@/hooks/use-toast';
 import { 
   User, 
   Server, 
@@ -15,7 +18,10 @@ import {
   Shield,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Eye,
+  AlertTriangle,
+  Trash
 } from 'lucide-react';
 
 interface Device {
@@ -48,8 +54,13 @@ interface Device {
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [showDeviceDetails, setShowDeviceDetails] = useState(false);
+  const [showDecommissionConfirm, setShowDecommissionConfirm] = useState(false);
+  const [decommissioningDevice, setDecommissioningDevice] = useState(false);
   const API_BASE_URL = 'http://localhost:3000';
 
   useEffect(() => {
@@ -68,6 +79,95 @@ const Profile = () => {
     };
     if (user) fetchDevices();
   }, [user]);
+
+  const handleViewDetails = (device: Device) => {
+    setSelectedDevice(device);
+    setShowDeviceDetails(true);
+  };
+
+  const handleDecommissionDevice = async () => {
+    if (!selectedDevice) return;
+    
+    setDecommissioningDevice(true);
+    try {
+      await axios.patch(
+        `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`,
+        {
+          decommission_details: 'Decommissioned via user interface'
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
+
+      // Update the device in the local state
+      setDevices(prevDevices => 
+        prevDevices.map(device => 
+          device.device_id === selectedDevice.device_id 
+            ? { 
+                ...device, 
+                status: 'decommissioned',
+                decommissioned_on: new Date().toISOString(),
+                decommissioned_by: user?.name || 'Unknown',
+                decommission_details: 'Decommissioned via user interface'
+              }
+            : device
+        )
+      );
+
+      // Update selected device as well
+      setSelectedDevice(prev => prev ? {
+        ...prev,
+        status: 'decommissioned',
+        decommissioned_on: new Date().toISOString(),
+        decommissioned_by: user?.name || 'Unknown',
+        decommission_details: 'Decommissioned via user interface'
+      } : null);
+
+      toast({
+        title: 'Device Decommissioned',
+        description: `${selectedDevice.machine_name} has been successfully decommissioned.`,
+      });
+
+      setShowDecommissionConfirm(false);
+    } catch (error: any) {
+      console.error('Decommission error:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to decommission device.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDecommissioningDevice(false);
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/devices/${deviceId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+
+      setDevices(prevDevices => prevDevices.filter(device => device.device_id !== deviceId));
+      
+      if (selectedDevice && selectedDevice.device_id === deviceId) {
+        setSelectedDevice(null);
+        setShowDeviceDetails(false);
+      }
+
+      toast({
+        title: 'Device Deleted',
+        description: 'The device has been permanently deleted.',
+      });
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete device.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Redirect to login if not authenticated
   if (!user) {
@@ -229,8 +329,9 @@ const Profile = () => {
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-3"
-                        onClick={() => navigate('/compliance')}
+                        onClick={() => handleViewDetails(device)}
                       >
+                        <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </Button>
                     </CardContent>
@@ -318,6 +419,203 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Device Details Modal */}
+        <Modal
+          isOpen={showDeviceDetails}
+          onClose={() => {
+            setShowDeviceDetails(false);
+            setSelectedDevice(null);
+          }}
+          title="Device Details"
+          size="lg"
+        >
+          {selectedDevice && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Device UUID
+                    </label>
+                    <p className="text-sm font-mono bg-muted/50 p-2 rounded">
+                      {selectedDevice.uuid}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Device Type
+                    </label>
+                    <p className="text-sm">
+                      <Badge variant="outline">{selectedDevice.type.toUpperCase()}</Badge>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Host Name
+                    </label>
+                    <p className="text-sm">{selectedDevice.device_subtype}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Contact Number
+                    </label>
+                    <p className="text-sm">{selectedDevice.owner_phone || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Status
+                    </label>
+                    <Badge variant={selectedDevice.status === 'active' ? 'default' : 'secondary'}>
+                      {selectedDevice.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      IP Address
+                    </label>
+                    <p className="text-sm font-mono bg-muted/50 p-2 rounded">
+                      {selectedDevice.ip_address}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Device Name
+                    </label>
+                    <p className="text-sm">{selectedDevice.machine_name}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Owner Name
+                    </label>
+                    <p className="text-sm">{selectedDevice.owner_name || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Email Address
+                    </label>
+                    <p className="text-sm">{selectedDevice.owner_email || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Created On
+                    </label>
+                    <p className="text-sm">{new Date(selectedDevice.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  Description
+                </label>
+                <p className="text-sm bg-muted/50 p-3 rounded">
+                  {selectedDevice.description || 'No description provided'}
+                </p>
+              </div>
+
+              {selectedDevice.status === 'decommissioned' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <h4 className="font-medium text-yellow-800">Device Decommissioned</h4>
+                  </div>
+                  <div className="text-sm text-yellow-700 space-y-1">
+                    <p><strong>Decommissioned on:</strong> {selectedDevice.decommissioned_on ? new Date(selectedDevice.decommissioned_on).toLocaleDateString() : 'Unknown'}</p>
+                    <p><strong>Decommissioned by:</strong> {selectedDevice.decommissioned_by || 'Unknown'}</p>
+                    {selectedDevice.decommission_details && (
+                      <p><strong>Details:</strong> {selectedDevice.decommission_details}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex space-x-3 pt-4">
+                {selectedDevice.status === 'active' ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDecommissionConfirm(true)}
+                    className="flex-1"
+                  >
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    Decommission Device
+                  </Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteDevice(selectedDevice.device_id)}
+                    className="flex-1"
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete Device
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeviceDetails(false);
+                    setSelectedDevice(null);
+                  }}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Decommission Confirmation Modal */}
+        <Modal
+          isOpen={showDecommissionConfirm}
+          onClose={() => setShowDecommissionConfirm(false)}
+          title="Confirm Decommission"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+              <div>
+                <h4 className="font-medium text-red-800">Warning: This action cannot be undone</h4>
+                <p className="text-sm text-red-700 mt-1">
+                  Are you sure you want to decommission "{selectedDevice?.machine_name}"? 
+                  This will mark the device as inactive and it will no longer be available for compliance checks.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <Button
+                variant="destructive"
+                onClick={handleDecommissionDevice}
+                disabled={decommissioningDevice}
+                className="flex-1"
+              >
+                {decommissioningDevice ? 'Decommissioning...' : 'Yes, Decommission'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowDecommissionConfirm(false)}
+                disabled={decommissioningDevice}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
