@@ -114,7 +114,7 @@ const Profile = () => {
           device.device_id === selectedDevice.device_id 
             ? { 
                 ...device, 
-                status: 'decommissioned',
+                status: 'decommissioned' as const,
                 decommissioned_on: new Date().toISOString(),
                 decommissioned_by: user?.name || 'Unknown',
                 decommission_details: 'Decommissioned via user interface'
@@ -129,7 +129,7 @@ const Profile = () => {
       setSelectedDevice(prev => {
         const updatedDevice = prev ? {
           ...prev,
-          status: 'decommissioned',
+          status: 'decommissioned' as const,
           decommissioned_on: new Date().toISOString(),
           decommissioned_by: user?.name || 'Unknown',
           decommission_details: 'Decommissioned via user interface'
