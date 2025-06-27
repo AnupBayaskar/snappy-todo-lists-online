@@ -42,6 +42,12 @@ interface Device {
   mediumIssues?: number;
 }
 
+interface DecommissionResponse {
+  decommissioned_on?: string;
+  decommissioned_by?: string;
+  decommission_details?: string;
+}
+
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -96,7 +102,7 @@ const Profile = () => {
       console.log('Making API call to decommission device');
       
       // Make actual API call to decommission the device
-      const response = await axios.patch(
+      const response = await axios.patch<DecommissionResponse>(
         `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`,
         {
           decommission_details: 'Decommissioned via user interface'
