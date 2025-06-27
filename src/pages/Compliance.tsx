@@ -707,32 +707,6 @@ const Compliance = () => {
               <Input value={newDevice.uuid} disabled className="bg-gray-100 cursor-not-allowed" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Device Type *</label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="deviceType"
-                    value="os"
-                    checked={newDevice.type === 'os'}
-                    onChange={e => setNewDevice({ ...newDevice, type: e.target.value as 'os' })}
-                  />
-                  <span>OS</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="deviceType"
-                    value="service"
-                    checked={newDevice.type === 'service'}
-                    onChange={e => setNewDevice({ ...newDevice, type: e.target.value as 'service' })}
-                  />
-                  <span>Service</span>
-                </label>
-              </div>
-              {deviceErrors.type && <p className="text-sm text-destructive mt-1">{deviceErrors.type}</p>}
-            </div>
-            <div>
               <label className="block text-sm font-medium mb-2">Device Name *</label>
               <Input
                 value={newDevice.machine_name}
@@ -847,23 +821,6 @@ const Compliance = () => {
                 onChange={e => setNewDevice({ ...newDevice, description: e.target.value })}
                 placeholder="e.g., Production web server"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status *</label>
-              <Select
-                value={newDevice.status}
-                onValueChange={(value: 'active' | 'decommissioned') =>
-                  setNewDevice({ ...newDevice, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="decommissioned">Decommissioned</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="flex space-x-3 pt-4">
               <Button
