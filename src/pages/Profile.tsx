@@ -96,10 +96,18 @@ const Profile = () => {
     }
     
     console.log('Starting decommission process for device:', selectedDevice.device_id);
+    console.log('API endpoint:', `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`);
+    console.log('Token exists:', !!localStorage.getItem('token'));
+    
     setDecommissioningDevice(true);
     
     try {
       console.log('Making API call to decommission device');
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
       
       // Make actual API call to decommission the device
       const response = await axios.patch<DecommissionResponse>(
@@ -108,11 +116,16 @@ const Profile = () => {
           decommission_details: 'Decommissioned via user interface'
         },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10 second timeout
         }
       );
 
       console.log('Decommission API response:', response.data);
+      console.log('Response status:', response.status);
 
       // Update the device in the local state with the response data
       const updatedDevice = {
@@ -143,15 +156,40 @@ const Profile = () => {
       
     } catch (error: any) {
       console.error('Decommission error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code
+      });
+      
       let errorMessage = 'Failed to decommission device.';
       
       if (error.response) {
         // Server responded with error status
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+        const status = error.response.status;
+        const serverMessage = error.response.data?.message || error.response.data?.error;
+        
+        if (status === 404) {
+          errorMessage = 'Device not found or decommission endpoint unavailable.';
+        } else if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to decommission this device.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error occurred. Please try again later.';
+        } else {
+          errorMessage = serverMessage || `Server error: ${status}`;
+        }
+        
         console.error('Server response error:', error.response.data);
       } else if (error.request) {
         // Request was made but no response received
-        errorMessage = 'Unable to connect to server. Please check your connection.';
+        if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Request timed out. Please check your connection and try again.';
+        } else {
+          errorMessage = 'Unable to connect to server. Please check your connection.';
+        }
         console.error('Network error:', error.request);
       } else {
         // Something else happened
