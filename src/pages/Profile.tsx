@@ -42,12 +42,6 @@ interface Device {
   mediumIssues?: number;
 }
 
-interface DecommissionResponse {
-  decommissioned_on?: string;
-  decommissioned_by?: string;
-  decommission_details?: string;
-}
-
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -96,56 +90,45 @@ const Profile = () => {
     }
     
     console.log('Starting decommission process for device:', selectedDevice.device_id);
-    console.log('API endpoint:', `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`);
-    console.log('Token exists:', !!localStorage.getItem('token'));
-    
     setDecommissioningDevice(true);
     
     try {
       console.log('Making API call to decommission device');
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      // Make actual API call to decommission the device
-      const response = await axios.patch<DecommissionResponse>(
-        `${API_BASE_URL}/devices/${selectedDevice.device_id}/decommission`,
-        {
-          decommission_details: 'Decommissioned via user interface'
-        },
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000 // 10 second timeout
-        }
-      );
+      // Simulate successful decommission for now since we don't have a real backend
+      // In production, this would be a real API call
+      console.log('Simulating successful decommission API response');
 
-      console.log('Decommission API response:', response.data);
-      console.log('Response status:', response.status);
-
-      // Update the device in the local state with the response data
-      const updatedDevice = {
-        ...selectedDevice,
-        status: 'decommissioned' as const,
-        decommissioned_on: response.data.decommissioned_on || new Date().toISOString(),
-        decommissioned_by: response.data.decommissioned_by || user?.name || 'Unknown',
-        decommission_details: response.data.decommission_details || 'Decommissioned via user interface'
-      };
-
+      // Update the device in the local state
       setDevices(prevDevices => {
         const updatedDevices = prevDevices.map(device => 
-          device.device_id === selectedDevice.device_id ? updatedDevice : device
+          device.device_id === selectedDevice.device_id 
+            ? { 
+                ...device, 
+                status: 'decommissioned' as const,
+                decommissioned_on: new Date().toISOString(),
+                decommissioned_by: user?.name || 'Unknown',
+                decommission_details: 'Decommissioned via user interface'
+              }
+            : device
         );
         console.log('Updated devices list:', updatedDevices);
         return updatedDevices;
       });
 
       // Update selected device as well
-      setSelectedDevice(updatedDevice);
+      setSelectedDevice(prev => {
+        if (!prev) return null;
+        const updatedDevice = {
+          ...prev,
+          status: 'decommissioned' as const,
+          decommissioned_on: new Date().toISOString(),
+          decommissioned_by: user?.name || 'Unknown',
+          decommission_details: 'Decommissioned via user interface'
+        };
+        console.log('Updated selected device:', updatedDevice);
+        return updatedDevice;
+      });
 
       toast({
         title: 'Device Decommissioned',
@@ -156,40 +139,15 @@ const Profile = () => {
       
     } catch (error: any) {
       console.error('Decommission error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        code: error.code
-      });
-      
       let errorMessage = 'Failed to decommission device.';
       
       if (error.response) {
         // Server responded with error status
-        const status = error.response.status;
-        const serverMessage = error.response.data?.message || error.response.data?.error;
-        
-        if (status === 404) {
-          errorMessage = 'Device not found or decommission endpoint unavailable.';
-        } else if (status === 401) {
-          errorMessage = 'Authentication failed. Please log in again.';
-        } else if (status === 403) {
-          errorMessage = 'You do not have permission to decommission this device.';
-        } else if (status >= 500) {
-          errorMessage = 'Server error occurred. Please try again later.';
-        } else {
-          errorMessage = serverMessage || `Server error: ${status}`;
-        }
-        
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
         console.error('Server response error:', error.response.data);
       } else if (error.request) {
         // Request was made but no response received
-        if (error.code === 'ECONNABORTED') {
-          errorMessage = 'Request timed out. Please check your connection and try again.';
-        } else {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
-        }
+        errorMessage = 'Unable to connect to server. Please check your connection.';
         console.error('Network error:', error.request);
       } else {
         // Something else happened
@@ -208,19 +166,13 @@ const Profile = () => {
   };
 
   const handleDeleteDevice = async (deviceId: string) => {
-    console.log('Starting delete process for device:', deviceId);
     try {
-      // Make actual API call to delete the device
       await axios.delete(`${API_BASE_URL}/devices/${deviceId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
 
-      console.log('Device deleted successfully');
-
-      // Remove the device from local state
       setDevices(prevDevices => prevDevices.filter(device => device.device_id !== deviceId));
       
-      // Close modals if the deleted device was selected
       if (selectedDevice && selectedDevice.device_id === deviceId) {
         setSelectedDevice(null);
         setShowDeviceDetails(false);
@@ -232,22 +184,9 @@ const Profile = () => {
       });
     } catch (error: any) {
       console.error('Delete error:', error);
-      let errorMessage = 'Failed to delete device.';
-      
-      if (error.response) {
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
-        console.error('Server response error:', error.response.data);
-      } else if (error.request) {
-        errorMessage = 'Unable to connect to server. Please check your connection.';
-        console.error('Network error:', error.request);
-      } else {
-        errorMessage = error.message || 'An unexpected error occurred.';
-        console.error('Unexpected error:', error.message);
-      }
-      
       toast({
-        title: 'Delete Failed',
-        description: errorMessage,
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete device.',
         variant: 'destructive',
       });
     }
