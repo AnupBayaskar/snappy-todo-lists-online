@@ -9,7 +9,7 @@ import Modal from '@/components/ui/modal';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Plus, Search, Download, CheckCircle, X, HelpCircle, Server, Save, AlertCircle, 
-  RotateCcw, OctagonX, Eraser, Check, FileText 
+  RotateCcw, OctagonX, Eraser, Check, FileText, Users 
 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,8 @@ const Compliance = () => {
   const [showSaveConfig, setShowSaveConfig] = useState(false);
   const [configName, setConfigName] = useState('');
   const [configComments, setConfigComments] = useState('');
+  const [teams] = useState(['Team A', 'Team B', 'Team C', 'Team D']);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [newDevice, setNewDevice] = useState({
     uuid: crypto.randomUUID(),
     type: 'os' as 'os' | 'service',
@@ -166,23 +168,15 @@ const Compliance = () => {
     }
   };
 
-  // Helper: get benchmark object by name
   const getBenchmarkByName = (name: string) => {
-    // Find the benchmark object from the last fetched options (if you want to use id or another field)
-    // You may want to store the full benchmark object in benchmarkOptions, not just name
-    return null; // Placeholder for future use
+    return null;
   };
 
   const fetchComplianceChecks = async (subtype: string) => {
     setChecksLoading(true);
     try {
-      // Try to find the exact benchmark object (if you have id, use it)
-      // Otherwise, fallback to using the name as before
       const encodedSubtype = encodeURIComponent(subtype);
-      // Try with /devices/checks/by-title?title=... (if your backend supports it)
       let url = `${API_BASE_URL}/devices/checks/${encodedSubtype}`;
-      // If you have a /devices/checks/by-title endpoint, use:
-      // let url = `${API_BASE_URL}/devices/checks/by-title?title=${encodedSubtype}`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -191,7 +185,6 @@ const Compliance = () => {
         status: null,
       })));
     } catch (error: any) {
-      // Try fallback: if 404, try with a fallback endpoint or show a user-friendly message
       setChecks([]);
       toast({
         title: 'No Compliance Checks Found',
@@ -309,7 +302,6 @@ const Compliance = () => {
     }
   };
 
-  // Add missing handleDeleteDevice function
   const handleDeleteDevice = async (deviceId: string) => {
     try {
       await axios.delete(`${API_BASE_URL}/devices/${deviceId}`, {
@@ -365,7 +357,7 @@ const Compliance = () => {
         `${API_BASE_URL}/saved-configurations`,
         {
           device_id: selectedDevice.device_id,
-          device_name: selectedDevice.machine_name, // <-- send device name
+          device_name: selectedDevice.machine_name,
           name: configName.trim(),
           comments: configComments.trim() || undefined,
           checks: checks.map(check => ({
@@ -403,7 +395,6 @@ const Compliance = () => {
       description: 'Report generation is not yet implemented. Save configuration to generate reports later.',
       variant: 'default',
     });
-    // Future: Implement POST /reports
   };
 
   const canGenerateReport = selectedDevice && checks.every(check => check.status !== null);
@@ -441,14 +432,45 @@ const Compliance = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Compliance Check</h1>
-            <p className="text-muted-foreground">Assess your infrastructure against CIS benchmarks</p>
+            <h1 className="text-4xl font-bold mb-2">Select Team</h1>
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowHelp(true)}>
             <HelpCircle className="mr-2 h-4 w-4" />
             How to Use
           </Button>
         </div>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-6 w-6" />
+              <span>Teams</span>
+            </CardTitle>
+            <CardDescription>Select a team to manage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {teams.map(team => (
+                <Card
+                  key={team}
+                  className={`cursor-pointer transition-all ${
+                    selectedTeam === team
+                      ? 'ring-2 ring-brand-green bg-brand-green/5'
+                      : 'hover:shadow-md'
+                  }`}
+                  onClick={() => setSelectedTeam(team)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <h4 className="font-semibold">{team}</h4>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="mb-8">
           <CardHeader>
@@ -465,10 +487,10 @@ const Compliance = () => {
               </div>
             ) : devices.length === 0 ? (
               <div className="text-center py-4">
-                <p className="text-muted-foreground">No devices found. Add a new device to start.</p>
+                <p className="text-muted-foreground">No devices found.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {devices.map(device => (
                   <Card
                     key={device.device_id}
@@ -510,10 +532,6 @@ const Compliance = () => {
                 ))}
               </div>
             )}
-            <Button variant="outline" onClick={() => setShowAddDevice(true)} className="w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Device
-            </Button>
           </CardContent>
         </Card>
 
@@ -692,174 +710,13 @@ const Compliance = () => {
           </div>
         )}
 
-        <Modal
-          isOpen={showAddDevice}
-          onClose={() => {
-            setShowAddDevice(false);
-            setDeviceErrors({});
-            setFilteredDeviceNames([]);
-          }}
-          title="Add New Device"
-        >
-          <div className="border-2 border-green-500 rounded-lg p-4 max-h-[80vh] overflow-y-auto space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Device UUID</label>
-              <Input value={newDevice.uuid} disabled className="bg-gray-100 cursor-not-allowed" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Device Name *</label>
-              <Input
-                value={newDevice.machine_name}
-                onChange={e => {
-                  setNewDevice({ ...newDevice, machine_name: e.target.value });
-                  setFilteredDeviceNames(
-                    deviceNameOptions.filter(name =>
-                      name.toLowerCase().includes(e.target.value.toLowerCase())
-                    )
-                  );
-                }}
-                placeholder="Search or type device name"
-              />
-              {filteredDeviceNames.length > 0 && (
-                <ul className="border border-green-600 mt-1 rounded bg-background max-h-40 overflow-y-auto shadow-lg z-10">
-                  {filteredDeviceNames.map(option => (
-                    <li
-                      key={option}
-                      onClick={() => {
-                        setNewDevice({ ...newDevice, machine_name: option });
-                        setFilteredDeviceNames([]);
-                      }}
-                      className="px-3 py-2 hover:bg-green-700 cursor-pointer"
-                    >
-                      {option}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {deviceErrors.machine_name && (
-                <p className="text-sm text-destructive mt-1">{deviceErrors.machine_name}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Device Subtype *</label>
-              <div className="relative">
-                <Select
-                  value={newDevice.device_subtype}
-                  onValueChange={value => setNewDevice({ ...newDevice, device_subtype: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Search or select a benchmark" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <Input
-                      autoFocus
-                      placeholder="Type to search..."
-                      value={benchmarkSearch}
-                      onChange={e => setBenchmarkSearch(e.target.value)}
-                      className="mb-2"
-                    />
-                    {Array.from(new Set(benchmarkOptions.filter(option => option && option.trim() !== ''))).map(option => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {deviceErrors.device_subtype && (
-                  <p className="text-sm text-destructive mt-1">{deviceErrors.device_subtype}</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">IP Address *</label>
-              <Input
-                value={newDevice.ip_address}
-                onChange={e => setNewDevice({ ...newDevice, ip_address: e.target.value })}
-                placeholder="e.g., 192.168.1.100"
-              />
-              {deviceErrors.ip_address && (
-                <p className="text-sm text-destructive mt-1">{deviceErrors.ip_address}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Owner Name *</label>
-              <Input
-                value={newDevice.owner_name}
-                onChange={e => setNewDevice({ ...newDevice, owner_name: e.target.value })}
-                placeholder="e.g., John Doe"
-              />
-              {deviceErrors.owner_name && (
-                <p className="text-sm text-destructive mt-1">{deviceErrors.owner_name}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Owner Phone *</label>
-              <Input
-                value={newDevice.owner_phone}
-                onChange={e => setNewDevice({ ...newDevice, owner_phone: e.target.value })}
-                placeholder="e.g., +1234567890"
-              />
-              {deviceErrors.owner_phone && (
-                <p className="text-sm text-destructive mt-1">{deviceErrors.owner_phone}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Owner Email *</label>
-              <Input
-                value={newDevice.owner_email}
-                onChange={e => setNewDevice({ ...newDevice, owner_email: e.target.value })}
-                placeholder="e.g., john.doe@example.com"
-              />
-              {deviceErrors.owner_email && (
-                <p className="text-sm text-destructive mt-1">{deviceErrors.owner_email}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <Input
-                value={newDevice.description}
-                onChange={e => setNewDevice({ ...newDevice, description: e.target.value })}
-                placeholder="e.g., Production web server"
-              />
-            </div>
-            <div className="flex space-x-3 pt-4">
-              <Button
-                onClick={handleAddDevice}
-                className="flex-1"
-                disabled={
-                  !newDevice.type ||
-                  !newDevice.device_subtype ||
-                  !newDevice.ip_address ||
-                  !newDevice.machine_name ||
-                  !newDevice.owner_name ||
-                  !newDevice.owner_phone ||
-                  !newDevice.owner_email
-                }
-              >
-                Add Device
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDevice(false);
-                  setDeviceErrors({});
-                  setFilteredDeviceNames([]);
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
         <Modal isOpen={showHelp} onClose={() => setShowHelp(false)} title="How to Use Compliance Check">
           <div className="space-y-4">
             <div className="space-y-3">
               <div>
-                <h4 className="font-semibold">1. Add a Device</h4>
+                <h4 className="font-semibold">1. Select a Team</h4>
                 <p className="text-sm text-muted-foreground">
-                  Add a new device with details like subtype and IP address. Devices are private to your account.
+                  Choose a team to manage from the available teams.
                 </p>
               </div>
               <div>
