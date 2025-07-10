@@ -142,10 +142,10 @@ const ComplianceDetails = () => {
           </Button>
         </div>
 
-        {/* 2-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[600px]">
-          {/* Left Column: Device Sections */}
-          <div className="space-y-4">
+        {/* 3-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 min-h-[600px]">
+          {/* Left Column: Device Overview (40% width) */}
+          <div className="lg:col-span-4 space-y-4">
             <DeviceOverview
               teamName={teamData.name}
               teamId={teamData.id}
@@ -156,26 +156,42 @@ const ComplianceDetails = () => {
             />
           </div>
 
-          {/* Right Column: Combined Section Details & Compliance Actions */}
-          <div className="space-y-4">
+          {/* Right Column Split: Network Security (30% width) */}
+          <div className="lg:col-span-3 space-y-4">
             <SectionDetails
-              sectionName={selectedSectionName}
-              details={sectionDetails}
+              sectionName={selectedSectionName || "Network Security"}
+              details={sectionDetails.length > 0 ? sectionDetails : [
+                {
+                  id: 'default-1',
+                  title: 'Firewall Configuration',
+                  description: 'Configure firewall rules to restrict unnecessary network access',
+                  category: 'Network',
+                  criticality: 'High' as const
+                },
+                {
+                  id: 'default-2',
+                  title: 'Network Monitoring',
+                  description: 'Monitor network traffic for suspicious activities',
+                  category: 'Monitoring',
+                  criticality: 'Medium' as const
+                }
+              ]}
             />
-            
-            {selectedSection && (
-              <ComplianceActions
-                comment={comment}
-                onCommentChange={setComment}
-                selectedAction={selectedAction}
-                onActionChange={handleActionChange}
-                onPrevious={handlePrevious}
-                onMark={handleMark}
-                onNext={handleNext}
-                canGoPrevious={true}
-                canGoNext={true}
-              />
-            )}
+          </div>
+
+          {/* Right Column Split: Compliance Actions (30% width) */}
+          <div className="lg:col-span-3 space-y-4">
+            <ComplianceActions
+              comment={comment}
+              onCommentChange={setComment}
+              selectedAction={selectedAction}
+              onActionChange={handleActionChange}
+              onPrevious={handlePrevious}
+              onMark={handleMark}
+              onNext={handleNext}
+              canGoPrevious={true}
+              canGoNext={true}
+            />
           </div>
         </div>
 
