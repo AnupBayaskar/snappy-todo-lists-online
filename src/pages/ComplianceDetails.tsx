@@ -1,13 +1,14 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, FileText, Check, X, SkipForward, RotateCcw } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { ArrowLeft, Save, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import DeviceOverview from '@/components/compliance/DeviceOverview';
+import SectionDetails from '@/components/compliance/SectionDetails';
+import ComplianceActions from '@/components/compliance/ComplianceActions';
 
 const mockSections = [
   { id: 'section-1', name: 'Authentication & Access Control' },
@@ -56,8 +57,9 @@ const ComplianceDetails = () => {
   const [comment, setComment] = useState('');
 
   const sectionDetails = selectedSection ? mockSectionDetails[selectedSection as keyof typeof mockSectionDetails] || [] : [];
+  const selectedSectionName = selectedSection ? mockSections.find(s => s.id === selectedSection)?.name || '' : '';
 
-  const handleActionSelect = (action: string) => {
+  const handleActionChange = (action: string) => {
     setSelectedAction(selectedAction === action ? null : action);
   };
 
@@ -77,6 +79,21 @@ const ComplianceDetails = () => {
 
   const handleBack = () => {
     navigate('/compliance');
+  };
+
+  const handlePrevious = () => {
+    // Logic for previous section/item
+    console.log('Previous clicked');
+  };
+
+  const handleMark = () => {
+    // Logic for marking current item
+    console.log('Mark clicked');
+  };
+
+  const handleNext = () => {
+    // Logic for next section/item
+    console.log('Next clicked');
   };
 
   if (!user || user.role !== 'user') {
@@ -111,7 +128,7 @@ const ComplianceDetails = () => {
 
   return (
     <div className="min-h-screen section-padding">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold mb-2">Compliance Details</h1>
@@ -125,116 +142,42 @@ const ComplianceDetails = () => {
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Section Details & Compliance Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Device Sections Dropdown */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Device Sections</label>
-              <Select value={selectedSection || ''} onValueChange={setSelectedSection}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a section" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockSections.map((section) => (
-                    <SelectItem key={section.id} value={section.id}>
-                      {section.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[600px]">
+          {/* Left Column: Device Sections */}
+          <div className="space-y-4">
+            <DeviceOverview
+              teamName={teamData.name}
+              teamId={teamData.id}
+              deviceName={deviceData.name}
+              sections={mockSections}
+              selectedSection={selectedSection}
+              onSectionChange={setSelectedSection}
+            />
+          </div>
 
-            {/* Section Details */}
-            {selectedSection && sectionDetails.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Section Details</h3>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {sectionDetails.map((detail) => (
-                    <div key={detail.id} className="border rounded-lg p-4 bg-muted/50">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold">{detail.title}</h4>
-                        <div className="flex space-x-2">
-                          <span className="text-xs px-2 py-1 rounded bg-background border">
-                            {detail.category}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            detail.criticality === 'High' 
-                              ? 'bg-destructive text-destructive-foreground' 
-                              : 'bg-secondary text-secondary-foreground'
-                          }`}>
-                            {detail.criticality}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{detail.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Compliance Actions */}
+          {/* Right Column: Section Details & Compliance Actions */}
+          <div className="space-y-4">
+            <SectionDetails
+              sectionName={selectedSectionName}
+              details={sectionDetails}
+            />
+            
             {selectedSection && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Compliance Actions</h3>
-                
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Button
-                    variant={selectedAction === 'checked' ? 'default' : 'outline'}
-                    onClick={() => handleActionSelect('checked')}
-                    className={`flex items-center gap-2 ${
-                      selectedAction === 'checked' ? 'bg-green-600 hover:bg-green-700' : ''
-                    }`}
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={selectedAction === 'cross' ? 'default' : 'outline'}
-                    onClick={() => handleActionSelect('cross')}
-                    className={`flex items-center gap-2 ${
-                      selectedAction === 'cross' ? 'bg-red-600 hover:bg-red-700' : ''
-                    }`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={selectedAction === 'skip' ? 'default' : 'outline'}
-                    onClick={() => handleActionSelect('skip')}
-                    className={`flex items-center gap-2 ${
-                      selectedAction === 'skip' ? 'bg-yellow-600 hover:bg-yellow-700' : ''
-                    }`}
-                  >
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={selectedAction === 'reset' ? 'default' : 'outline'}
-                    onClick={() => handleActionSelect('reset')}
-                    className={`flex items-center gap-2 ${
-                      selectedAction === 'reset' ? 'bg-gray-600 hover:bg-gray-700' : ''
-                    }`}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Comment Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Comment</label>
-                  <Textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Add your comments here..."
-                    rows={3}
-                  />
-                </div>
-              </div>
+              <ComplianceActions
+                comment={comment}
+                onCommentChange={setComment}
+                selectedAction={selectedAction}
+                onActionChange={handleActionChange}
+                onPrevious={handlePrevious}
+                onMark={handleMark}
+                onNext={handleNext}
+                canGoPrevious={true}
+                canGoNext={true}
+              />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Bottom Action Buttons */}
         <div className="flex justify-center space-x-4 pt-6 border-t">
