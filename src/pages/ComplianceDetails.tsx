@@ -156,7 +156,7 @@ const ComplianceDetails = () => {
             />
           </div>
 
-          {/* Right Column: Section Details & Compliance Actions */}
+          {/* Right Column: Combined Section Details & Compliance Actions */}
           <div className="space-y-4">
             <SectionDetails
               sectionName={selectedSectionName}
