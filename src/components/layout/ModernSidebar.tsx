@@ -8,13 +8,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Home, FileText, CheckCircle, User, Moon, Sun, Save } from 'lucide-react';
+import { Home, FileText, CheckCircle, User, Moon, Sun, Save, Users, HardDrive } from 'lucide-react';
 
 const navigationItems = [
   { title: 'Home', url: '/', icon: Home },
   { title: 'View Benchmarks', url: '/benchmarks', icon: FileText },
   { title: 'Compliance Check', url: '/compliance', icon: CheckCircle },
-    { title: 'Saved Configurations', url: '/saved-configurations', icon: Save },
+  { title: 'Saved Configurations', url: '/saved-configurations', icon: Save },
+  { title: 'Team Space', url: '/team-space', icon: Users },
+  { title: 'Device Space', url: '/device-space', icon: HardDrive },
   { title: 'User Profile', url: '/profile', icon: User },
 ];
 

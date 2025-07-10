@@ -19,6 +19,8 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import SavedConfigurations from "./pages/SavedConfigurations";
+import TeamSpace from "./pages/TeamSpace";
+import DeviceSpace from "./pages/DeviceSpace";
 import { ConfigurationProvider } from './context/ConfigurationContext';
 
 const queryClient = new QueryClient();
@@ -50,6 +52,8 @@ const App = () => (
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/saved-configurations" element={<SavedConfigurations />} />
+                  <Route path="/team-space" element={<TeamSpace />} />
+                  <Route path="/device-space" element={<DeviceSpace />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
