@@ -1,13 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Monitor, Plus, Wifi, WifiOff, Server, Smartphone, Laptop } from 'lucide-react';
-import { useToast } from '@/hooks/useToast';
+import { 
+  Monitor, 
+  Server, 
+  Smartphone, 
+  Laptop, 
+  Plus, 
+  Search, 
+  Filter,
+  MoreVertical,
+  Eye,
+  Edit,
+  Trash2,
+  Users
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Device {
   _id: string;
@@ -22,332 +33,217 @@ interface Device {
 interface Team {
   _id: string;
   name: string;
+  description: string;
 }
 
-// Mock data
-const mockTeams: Team[] = [
-  { _id: '1', name: 'Security Team' },
-  { _id: '2', name: 'IT Operations' }
-];
-
-const mockDevices: Device[] = [
-  {
-    _id: '1',
-    name: 'Web Server 01',
-    type: 'Ubuntu Server 20.04',
-    ipAddress: '192.168.1.100',
-    status: 'online',
-    teamId: '1',
-    lastSeen: new Date().toISOString()
-  },
-  {
-    _id: '2',
-    name: 'Database Server',
-    type: 'CentOS 8',
-    ipAddress: '192.168.1.101',
-    status: 'online',
-    teamId: '1',
-    lastSeen: new Date().toISOString()
-  },
-  {
-    _id: '3',
-    name: 'John Laptop',
-    type: 'Windows 11 Pro',
-    ipAddress: '192.168.1.150',
-    status: 'offline',
-    teamId: '2',
-    lastSeen: new Date(Date.now() - 86400000).toISOString()
-  }
-];
-
 export default function DeviceSpace() {
-  const [devices, setDevices] = useState<Device[]>(mockDevices);
-  const [teams, setTeams] = useState<Team[]>(mockTeams);
-  const [loading, setLoading] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [showAddDevice, setShowAddDevice] = useState(false);
-  const [newDevice, setNewDevice] = useState({ name: '', type: '', ipAddress: '', teamId: '' });
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('all');
 
-  const handleAddDevice = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Adding new device:', newDevice);
-    
-    const deviceToAdd: Device = {
-      _id: `device${devices.length + 1}`,
-      ...newDevice,
-      status: 'online' as const,
-      lastSeen: new Date().toISOString()
-    };
-    
-    setDevices([...devices, deviceToAdd]);
-    setShowAddDevice(false);
-    setNewDevice({ name: '', type: '', ipAddress: '', teamId: '' });
-    
+  // Mock data with proper typing
+  const mockTeams: Team[] = [
+    { _id: 'team1', name: 'Security Team', description: 'Network security and monitoring' },
+    { _id: 'team2', name: 'IT Operations', description: 'System administration and maintenance' },
+    { _id: 'team3', name: 'Development', description: 'Software development and testing' }
+  ];
+
+  const mockDevices: Device[] = [
+    {
+      _id: '1',
+      name: 'Firewall-Primary',
+      type: 'firewall',
+      ipAddress: '192.168.1.1',
+      status: 'online',
+      teamId: 'team1',
+      lastSeen: '2024-01-15T10:30:00Z'
+    },
+    {
+      _id: '2',
+      name: 'Web-Server-01',
+      type: 'server',
+      ipAddress: '192.168.1.100',
+      status: 'online',
+      teamId: 'team2',
+      lastSeen: '2024-01-15T10:25:00Z'
+    },
+    {
+      _id: '3',
+      name: 'Dev-Laptop-JD',
+      type: 'laptop',
+      ipAddress: '192.168.1.205',
+      status: 'offline',
+      teamId: 'team3',
+      lastSeen: '2024-01-14T16:45:00Z'
+    }
+  ];
+
+  const [devices] = useState<Device[]>(mockDevices);
+  const [teams] = useState<Team[]>(mockTeams);
+
+  const getDeviceIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'server': return Server;
+      case 'laptop': return Laptop;
+      case 'smartphone': return Smartphone;
+      case 'firewall': return Monitor;
+      default: return Monitor;
+    }
+  };
+
+  const handleAddDevice = () => {
     toast({
-      title: "Success",
-      description: "Device added successfully",
+      title: "Add Device",
+      description: "Device addition functionality will be implemented here.",
     });
   };
 
-  const getDeviceIcon = (type: string) => {
-    if (type.toLowerCase().includes('server')) return Server;
-    if (type.toLowerCase().includes('mobile') || type.toLowerCase().includes('phone')) return Smartphone;
-    if (type.toLowerCase().includes('laptop') || type.toLowerCase().includes('desktop')) return Laptop;
-    return Monitor;
-  };
+  const filteredDevices = devices.filter(device => {
+    const matchesSearch = device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         device.ipAddress.includes(searchQuery);
+    const matchesTeam = selectedTeam === 'all' || device.teamId === selectedTeam;
+    return matchesSearch && matchesTeam;
+  });
 
-  const getTeamName = (teamId: string) => {
-    const team = teams.find(t => t._id === teamId);
-    return team?.name || 'Unknown Team';
-  };
-
-  const devicesByTeam = devices.reduce((acc: Record<string, Device[]>, device) => {
-    const teamName = getTeamName(device.teamId);
-    if (!acc[teamName]) {
-      acc[teamName] = [];
-    }
-    acc[teamName].push(device);
+  // Group devices by team
+  const devicesByTeam = teams.reduce((acc, team) => {
+    acc[team.name] = filteredDevices.filter(device => device.teamId === team._id);
     return acc;
-  }, {});
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="space-y-6">
-          <div className="h-8 bg-muted rounded animate-pulse" />
-          <div className="grid gap-6">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="p-6">
-                <div className="space-y-4">
-                  <div className="h-6 bg-muted rounded animate-pulse" />
-                  <div className="grid grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, j) => (
-                      <div key={j} className="h-32 bg-muted rounded animate-pulse" />
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, {} as Record<string, Device[]>);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-          <Monitor className="w-6 h-6 text-white" />
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Device Space</h1>
-          <p className="text-muted-foreground">Manage devices across your organization</p>
+          <h1 className="text-3xl font-bold tracking-tight">Device Management</h1>
+          <p className="text-muted-foreground">
+            Manage and monitor devices across your organization
+          </p>
+        </div>
+        <Button onClick={handleAddDevice} className="flex items-center space-x-2">
+          <Plus className="w-4 h-4" />
+          <span>Add Device</span>
+        </Button>
+      </div>
+
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search devices by name or IP address..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={selectedTeam}
+            onChange={(e) => setSelectedTeam(e.target.value)}
+            className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+          >
+            <option value="all">All Teams</option>
+            {teams.map(team => (
+              <option key={team._id} value={team._id}>{team.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <div className="space-y-6">
+      {/* Devices by Team */}
+      <div className="space-y-8">
         {Object.entries(devicesByTeam).map(([teamName, teamDevices]) => (
-          <Card key={teamName} className="border hover:shadow-lg transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <Monitor className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{teamName}</h3>
-                  <p className="text-sm text-muted-foreground">{teamDevices.length} devices</p>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          teamDevices.length > 0 && (
+            <div key={teamName} className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Users className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-xl font-semibold">{teamName}</h2>
+                <Badge variant="secondary">{teamDevices.length}</Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {teamDevices.map((device) => {
                   const DeviceIcon = getDeviceIcon(device.type);
                   return (
-                    <div
-                      key={device._id}
-                      className="p-4 rounded-xl border border-border hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => setSelectedDevice(device)}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                          <DeviceIcon className="h-5 w-5 text-green-600" />
+                    <Card key={device._id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-muted rounded-lg">
+                              <DeviceIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg">{device.name}</CardTitle>
+                              <CardDescription className="capitalize">{device.type}</CardDescription>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{device.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{device.type}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
+                      </CardHeader>
+                      <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Status</span>
-                          <div className="flex items-center gap-1">
-                            {device.status === 'online' ? (
-                              <Wifi className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <WifiOff className="h-4 w-4 text-red-500" />
-                            )}
-                            <Badge
-                              variant={device.status === 'online' ? 'default' : 'destructive'}
-                              className={device.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}
-                            >
-                              {device.status}
-                            </Badge>
-                          </div>
+                          <Badge 
+                            variant={device.status === 'online' ? 'default' : 'secondary'}
+                            className={device.status === 'online' ? 'bg-green-500 hover:bg-green-600' : ''}
+                          >
+                            {device.status}
+                          </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">IP</span>
+                          <span className="text-sm text-muted-foreground">IP Address</span>
                           <span className="text-sm font-mono">{device.ipAddress}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full mt-2 text-green-600 hover:bg-green-50"
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Last Seen</span>
+                          <span className="text-sm">
+                            {new Date(device.lastSeen).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex space-x-2 pt-2">
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
-
-                <div
-                  className="p-4 rounded-xl border-2 border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
-                  onClick={() => {
-                    const team = teams.find(t => t.name === teamName);
-                    if (team) {
-                      setNewDevice({ ...newDevice, teamId: team._id });
-                      setShowAddDevice(true);
-                    }
-                  }}
-                >
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                    <Plus className="h-6 w-6 text-green-600" />
-                  </div>
-                  <p className="text-sm font-medium text-green-600">Add Device</p>
-                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )
         ))}
       </div>
 
-      {/* Add Device Dialog */}
-      <Dialog open={showAddDevice} onOpenChange={setShowAddDevice}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Device</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddDevice} className="space-y-4">
-            <Input
-              placeholder="Device Name"
-              value={newDevice.name}
-              onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
-              required
-            />
-            <Input
-              placeholder="Device Type (e.g., Ubuntu Server, Windows 10)"
-              value={newDevice.type}
-              onChange={(e) => setNewDevice({ ...newDevice, type: e.target.value })}
-              required
-            />
-            <Input
-              placeholder="IP Address"
-              value={newDevice.ipAddress}
-              onChange={(e) => setNewDevice({ ...newDevice, ipAddress: e.target.value })}
-              required
-            />
-            <Select
-              value={newDevice.teamId}
-              onValueChange={(value) => setNewDevice({ ...newDevice, teamId: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Team" />
-              </SelectTrigger>
-              <SelectContent>
-                {teams.map((team) => (
-                  <SelectItem key={team._id} value={team._id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowAddDevice(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1">
-                Add Device
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Device Details Dialog */}
-      <Dialog open={!!selectedDevice} onOpenChange={() => setSelectedDevice(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Device Details</DialogTitle>
-          </DialogHeader>
-          {selectedDevice && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-                  {(() => {
-                    const DeviceIcon = getDeviceIcon(selectedDevice.type);
-                    return <DeviceIcon className="h-8 w-8 text-green-600" />;
-                  })()}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold">{selectedDevice.name}</h3>
-                  <p className="text-muted-foreground">{selectedDevice.type}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {selectedDevice.status === 'online' ? (
-                      <Wifi className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <WifiOff className="h-4 w-4 text-red-500" />
-                    )}
-                    <Badge
-                      variant={selectedDevice.status === 'online' ? 'default' : 'destructive'}
-                      className={selectedDevice.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}
-                    >
-                      {selectedDevice.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IP Address</p>
-                  <p className="font-mono mt-1">{selectedDevice.ipAddress}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Team</p>
-                  <p className="mt-1">{getTeamName(selectedDevice.teamId)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Last Seen</p>
-                  <p className="mt-1">{new Date(selectedDevice.lastSeen).toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1">
-                  Edit Device
-                </Button>
-                <Button variant="destructive" className="flex-1">
-                  Decommission
-                </Button>
-              </div>
-            </div>
+      {filteredDevices.length === 0 && (
+        <div className="text-center py-12">
+          <Monitor className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No devices found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchQuery || selectedTeam !== 'all' 
+              ? "Try adjusting your search or filter criteria."
+              : "Get started by adding your first device."}
+          </p>
+          {(!searchQuery && selectedTeam === 'all') && (
+            <Button onClick={handleAddDevice}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Device
+            </Button>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }
