@@ -9,13 +9,28 @@ import { Badge } from '@/components/ui/badge';
 import { Monitor, Plus, Wifi, WifiOff, Server, Smartphone, Laptop } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 
+interface Device {
+  _id: string;
+  name: string;
+  type: string;
+  ipAddress: string;
+  status: 'online' | 'offline';
+  teamId: string;
+  lastSeen: string;
+}
+
+interface Team {
+  _id: string;
+  name: string;
+}
+
 // Mock data
-const mockTeams = [
+const mockTeams: Team[] = [
   { _id: '1', name: 'Security Team' },
   { _id: '2', name: 'IT Operations' }
 ];
 
-const mockDevices = [
+const mockDevices: Device[] = [
   {
     _id: '1',
     name: 'Web Server 01',
@@ -44,21 +59,6 @@ const mockDevices = [
     lastSeen: new Date(Date.now() - 86400000).toISOString()
   }
 ];
-
-interface Device {
-  _id: string;
-  name: string;
-  type: string;
-  ipAddress: string;
-  status: 'online' | 'offline';
-  teamId: string;
-  lastSeen: string;
-}
-
-interface Team {
-  _id: string;
-  name: string;
-}
 
 export default function DeviceSpace() {
   const [devices, setDevices] = useState<Device[]>(mockDevices);
