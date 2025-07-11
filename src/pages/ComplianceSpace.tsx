@@ -1,260 +1,304 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Shield, 
+  AlertTriangle, 
   CheckCircle, 
-  XCircle, 
-  Clock, 
-  AlertCircle,
-  Filter,
-  Search,
-  Eye,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Activity,
   FileText,
-  Users
+  Users,
+  Server
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+
+// Mock compliance data
+const complianceOverview = {
+  totalControls: 180,
+  compliantControls: 142,
+  nonCompliantControls: 28,
+  pendingControls: 10,
+  overallScore: 79
+};
+
+const recentActivities = [
+  {
+    id: 1,
+    type: 'compliance_check',
+    device: 'Web Server - Production',
+    control: 'CIS-1.1.1 Ensure mounting of cramfs filesystems is disabled',
+    status: 'compliant',
+    timestamp: '2024-01-15T10:30:00Z',
+    user: 'John Doe'
+  },
+  {
+    id: 2,
+    type: 'configuration_change',
+    device: 'Database Server - MySQL',
+    control: 'CIS-1.2.3 Ensure password reuse is limited',
+    status: 'non-compliant',
+    timestamp: '2024-01-14T15:45:00Z',
+    user: 'Jane Smith'
+  },
+  {
+    id: 3,
+    type: 'system_update',
+    device: 'File Server - Archive',
+    control: 'CIS-1.3.1 Ensure updates, patches, and hotfixes are installed',
+    status: 'pending',
+    timestamp: '2024-01-13T09:12:00Z',
+    user: 'Bob Wilson'
+  },
+  {
+    id: 4,
+    type: 'user_login',
+    device: 'Workstation - Developer 1',
+    control: 'CIS-1.4.2 Ensure multifactor authentication for all accounts',
+    status: 'compliant',
+    timestamp: '2024-01-12T18:22:00Z',
+    user: 'Alice Johnson'
+  },
+  {
+    id: 5,
+    type: 'policy_update',
+    device: 'Firewall - Corporate',
+    control: 'CIS-1.5.3 Ensure firewall rules are reviewed annually',
+    status: 'non-compliant',
+    timestamp: '2024-01-11T11:58:00Z',
+    user: 'Charlie Brown'
+  }
+];
+
+const complianceControls = [
+  {
+    id: 'ctrl-001',
+    control: 'CIS-1.1.1 Ensure mounting of cramfs filesystems is disabled',
+    device: 'Web Server - Production',
+    team: 'Security Team',
+    status: 'compliant',
+    priority: 'low',
+    lastChecked: '2024-01-15T10:30:00Z'
+  },
+  {
+    id: 'ctrl-002',
+    control: 'CIS-1.2.3 Ensure password reuse is limited',
+    device: 'Database Server - MySQL',
+    team: 'IT Operations',
+    status: 'non-compliant',
+    priority: 'critical',
+    lastChecked: '2024-01-14T15:45:00Z'
+  },
+  {
+    id: 'ctrl-003',
+    control: 'CIS-1.3.1 Ensure updates, patches, and hotfixes are installed',
+    device: 'File Server - Archive',
+    team: 'Security Team',
+    status: 'pending',
+    priority: 'medium',
+    lastChecked: '2024-01-13T09:12:00Z'
+  },
+  {
+    id: 'ctrl-004',
+    control: 'CIS-1.4.2 Ensure multifactor authentication for all accounts',
+    device: 'Workstation - Developer 1',
+    team: 'IT Operations',
+    status: 'compliant',
+    priority: 'low',
+    lastChecked: '2024-01-12T18:22:00Z'
+  },
+  {
+    id: 'ctrl-005',
+    control: 'CIS-1.5.3 Ensure firewall rules are reviewed annually',
+    device: 'Firewall - Corporate',
+    team: 'Security Team',
+    status: 'non-compliant',
+    priority: 'high',
+    lastChecked: '2024-01-11T11:58:00Z'
+  }
+];
 
 export default function ComplianceSpace() {
-  const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDevice, setSelectedDevice] = useState('all');
+  const [selectedTeam, setSelectedTeam] = useState('all');
 
-  // Mock compliance data
-  const complianceItems = [
-    {
-      id: '1',
-      control: 'CIS Control 1.1',
-      title: 'Establish and Maintain Detailed Enterprise Asset Inventory',
-      description: 'Establish and maintain an accurate, detailed, and up-to-date inventory of all enterprise assets.',
-      status: 'compliant',
-      lastUpdated: '2024-01-15',
-      assignedTo: 'Security Team',
-      priority: 'high'
-    },
-    {
-      id: '2',
-      control: 'CIS Control 2.1',
-      title: 'Establish and Maintain a Software Inventory',
-      description: 'Establish and maintain a detailed inventory of all licensed software installed on enterprise assets.',
-      status: 'pending',
-      lastUpdated: '2024-01-14',
-      assignedTo: 'IT Operations',
-      priority: 'medium'
-    },
-    {
-      id: '3',
-      control: 'CIS Control 3.1',
-      title: 'Establish and Maintain a Data Management Process',
-      description: 'Establish and maintain a data management process for sensitive data.',
-      status: 'non-compliant',
-      lastUpdated: '2024-01-13',
-      assignedTo: 'Development Team',
-      priority: 'high'
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'critical':
+        return <Badge variant="destructive">Critical</Badge>;
+      case 'high':
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">High</Badge>;
+      case 'medium':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Medium</Badge>;
+      case 'low':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Low</Badge>;
+      default:
+        return <Badge variant="secondary">Unknown</Badge>;
     }
-  ];
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'compliant': return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'non-compliant': return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'pending': return <Clock className="w-5 h-5 text-yellow-500" />;
-      default: return <AlertCircle className="w-5 h-5 text-gray-500" />;
+      case 'compliant':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'non-compliant':
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      'compliant': 'bg-green-500 hover:bg-green-600',
-      'non-compliant': 'bg-red-500 hover:bg-red-600',
-      'pending': 'bg-yellow-500 hover:bg-yellow-600'
-    };
-    
-    return (
-      <Badge className={variants[status as keyof typeof variants] || 'bg-gray-500'}>
-        {status.replace('-', ' ')}
-      </Badge>
-    );
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      'high': { variant: 'destructive' as const, text: 'High' },
-      'medium': { variant: 'secondary' as const, text: 'Medium' },
-      'low': { variant: 'outline' as const, text: 'Low' }
-    };
-    
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig['medium'];
-    
-    return (
-      <Badge variant={config.variant}>
-        {config.text}
-      </Badge>
-    );
-  };
-
-  const filteredItems = complianceItems.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.control.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Calculate compliance statistics
-  const totalItems = complianceItems.length;
-  const compliantItems = complianceItems.filter(item => item.status === 'compliant').length;
-  const nonCompliantItems = complianceItems.filter(item => item.status === 'non-compliant').length;
-  const pendingItems = complianceItems.filter(item => item.status === 'pending').length;
-  const compliancePercentage = Math.round((compliantItems / totalItems) * 100);
-
   return (
-    <div className="container mx-auto p-6 space-y-6 pt-20">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-6 pt-24">
+      <div className="flex items-center space-x-4 mb-8">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+          <Shield className="w-6 h-6 text-white" />
+        </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Compliance Management</h1>
-          <p className="text-muted-foreground">
-            Monitor and manage CIS compliance controls across your organization
-          </p>
+          <h1 className="text-3xl font-bold">Compliance Dashboard</h1>
+          <p className="text-muted-foreground">Monitor CIS compliance across your infrastructure</p>
         </div>
       </div>
 
-      {/* Compliance Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall Compliance</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Card className="col-span-1 md:col-span-2 lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Overall Compliance</CardTitle>
+            {complianceOverview.overallScore >= 70 ? (
+              <TrendingUp className="w-5 h-5 ml-2 text-green-500" />
+            ) : (
+              <TrendingDown className="w-5 h-5 ml-2 text-red-500" />
+            )}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{compliancePercentage}%</div>
-            <Progress value={compliancePercentage} className="mt-2" />
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold">{complianceOverview.overallScore}%</h2>
+              <p className="text-sm text-muted-foreground">
+                {complianceOverview.compliantControls} / {complianceOverview.totalControls} controls compliant
+              </p>
+              <Progress value={complianceOverview.overallScore} />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compliant</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Non-Compliant Controls</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{compliantItems}</div>
-            <p className="text-xs text-muted-foreground">Controls passing</p>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold text-red-600">{complianceOverview.nonCompliantControls}</h2>
+              <p className="text-sm text-muted-foreground">Requires immediate attention</p>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Non-Compliant</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Pending Controls</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{nonCompliantItems}</div>
-            <p className="text-xs text-muted-foreground">Controls failing</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{pendingItems}</div>
-            <p className="text-xs text-muted-foreground">Awaiting review</p>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold text-yellow-600">{complianceOverview.pendingControls}</h2>
+              <p className="text-sm text-muted-foreground">Awaiting validation</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Search compliance controls..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="compliant">Compliant</option>
-            <option value="non-compliant">Non-Compliant</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Compliance Controls List */}
-      <div className="space-y-4">
-        {filteredItems.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
+      <Tabs defaultValue="recent" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="recent" className="flex items-center space-x-2">
+            <Activity className="w-4 h-4" />
+            <span>Recent Activity</span>
+          </TabsTrigger>
+          <TabsTrigger value="controls" className="flex items-center space-x-2">
+            <FileText className="w-4 h-4" />
+            <span>Compliance Controls</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="recent" className="space-y-4">
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon(item.status)}
-                  <div>
-                    <CardTitle className="text-lg">{item.control}</CardTitle>
-                    <CardDescription>{item.title}</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getPriorityBadge(item.priority)}
-                  {getStatusBadge(item.status)}
-                </div>
-              </div>
+              <CardTitle>Recent Activities</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{item.description}</p>
-              
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span>{item.assignedTo}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Last Updated: </span>
-                    <span>{new Date(item.lastUpdated).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Evidence
-                  </Button>
-                </div>
+            <CardContent>
+              <ul className="space-y-3">
+                {recentActivities.map((activity) => (
+                  <li key={activity.id} className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="flex items-center space-x-3">
+                      {getStatusIcon(activity.status)}
+                      <div>
+                        <p className="font-medium">{activity.device}</p>
+                        <p className="text-sm text-muted-foreground">{activity.control}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">{new Date(activity.timestamp).toLocaleDateString()}</p>
+                      <p className="text-sm text-muted-foreground">By: {activity.user}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="controls" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance Controls</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {complianceControls.map((control) => (
+                  <Card key={control.id} className="shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-semibold">{control.control}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Device: {control.device}</p>
+                        <p className="text-xs text-muted-foreground">Team: {control.team}</p>
+                        <div className="flex items-center justify-between">
+                          <span>Status:</span>
+                          {control.status === 'compliant' ? (
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Compliant
+                            </Badge>
+                          ) : control.status === 'non-compliant' ? (
+                            <Badge variant="destructive">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              Non-Compliant
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Pending
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Priority:</span>
+                          {getPriorityBadge(control.priority)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Last Checked: {new Date(control.lastChecked).toLocaleDateString()}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {filteredItems.length === 0 && (
-        <div className="text-center py-12">
-          <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No compliance controls found</h3>
-          <p className="text-muted-foreground">
-            {searchQuery || selectedStatus !== 'all' 
-              ? "Try adjusting your search or filter criteria."
-              : "Compliance controls will appear here once configured."}
-          </p>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

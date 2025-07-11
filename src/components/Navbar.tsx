@@ -21,7 +21,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background border-b border-border shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
         <div className="container mx-auto px-4 h-full flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <Link 
@@ -29,10 +29,10 @@ export function Navbar() {
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">C</span>
+                <span className="text-white font-bold text-sm">G</span>
               </div>
               <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                CIS Compliance
+                Governer
               </span>
             </Link>
           </div>

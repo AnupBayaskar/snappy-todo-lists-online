@@ -47,7 +47,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-brand-green to-brand-green-light flex items-center justify-center mb-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mb-4">
             <Shield className="w-6 h-6 text-white" />
           </div>
           <DialogTitle className="text-2xl font-bold">Welcome to Governer</DialogTitle>

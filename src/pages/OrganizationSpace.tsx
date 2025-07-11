@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,34 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Building, Plus, Users, Search, Filter, Crown, Shield, CheckCircle, User } from 'lucide-react';
+import { Building, Plus, Users, Search, Filter, Crown, Shield, CheckCircle, User, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-// Mock data
+// Mock organizations data
+const mockOrganizations = [
+  {
+    _id: 'org1',
+    name: 'Acme Corporation',
+    description: 'Leading technology solutions provider',
+    leader: 'Sarah Wilson',
+    teamsCount: 5,
+    membersCount: 25,
+    createdAt: '2024-01-15'
+  },
+  {
+    _id: 'org2',
+    name: 'TechStart Inc',
+    description: 'Innovative startup focused on AI solutions',
+    leader: 'John Doe',
+    teamsCount: 3,
+    membersCount: 12,
+    createdAt: '2024-02-20'
+  }
+];
+
+// Mock teams data for selected organization
 const mockTeams = [
   {
     _id: '1',
@@ -54,21 +76,24 @@ const roleConfig = {
 
 export default function OrganizationSpace() {
   const { user } = useAuth();
+  const [organizations, setOrganizations] = useState(mockOrganizations);
+  const [selectedOrganization, setSelectedOrganization] = useState(null);
   const [teams, setTeams] = useState(mockTeams);
   const [allMembers, setAllMembers] = useState(mockAllMembers);
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [showTeamDetails, setShowTeamDetails] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [selectedMember, setSelectedMember] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [newOrganization, setNewOrganization] = useState({ name: '', description: '' });
   const [newTeam, setNewTeam] = useState({ name: '', details: '', admin: '' });
   const [newMember, setNewMember] = useState({ name: '', email: '', role: '' });
 
   // Only show this page for organization leaders
   if (user?.role !== 'organization-lead') {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 pt-24">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
           <p className="text-muted-foreground">
@@ -79,18 +104,51 @@ export default function OrganizationSpace() {
     );
   }
 
+  const handleCreateOrganization = (e) => {
+    e.preventDefault();
+    const newOrg = {
+      _id: `org${Date.now()}`,
+      name: newOrganization.name,
+      description: newOrganization.description,
+      leader: user?.name || 'Current User',
+      teamsCount: 0,
+      membersCount: 1,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setOrganizations([...organizations, newOrg]);
+    setShowCreateOrg(false);
+    setNewOrganization({ name: '', description: '' });
+    toast.success('Organization created successfully!');
+  };
+
   const handleAddTeam = (e) => {
     e.preventDefault();
-    console.log('Adding new team:', newTeam);
+    const newTeamData = {
+      _id: `team${Date.now()}`,
+      name: newTeam.name,
+      details: newTeam.details,
+      admin: newTeam.admin,
+      members: []
+    };
+    setTeams([...teams, newTeamData]);
     setShowAddTeam(false);
     setNewTeam({ name: '', details: '', admin: '' });
+    toast.success('Team created successfully!');
   };
 
   const handleAddMember = (e) => {
     e.preventDefault();
-    console.log('Adding new member:', newMember);
+    const newMemberData = {
+      _id: `member${Date.now()}`,
+      name: newMember.name,
+      email: newMember.email,
+      role: newMember.role,
+      teams: []
+    };
+    setAllMembers([...allMembers, newMemberData]);
     setShowAddMember(false);
     setNewMember({ name: '', email: '', role: '' });
+    toast.success('Member added successfully!');
   };
 
   const filteredMembers = allMembers.filter(member =>
@@ -99,16 +157,121 @@ export default function OrganizationSpace() {
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // If no organization is selected, show organization selection/creation
+  if (!selectedOrganization) {
+    return (
+      <div className="container mx-auto p-6 pt-24">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+              <Building className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Organizations</h1>
+              <p className="text-muted-foreground">Select or create an organization to manage</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowCreateOrg(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Organization
+          </Button>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {organizations.map((org) => (
+            <Card
+              key={org._id}
+              className="border-2 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              onClick={() => setSelectedOrganization(org)}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                    <Building className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">{org.name}</h3>
+                    <p className="text-sm text-muted-foreground font-normal">
+                      {org.teamsCount} teams • {org.membersCount} members
+                    </p>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-3">{org.description}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">Leader:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {org.leader}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Created {new Date(org.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Create Organization Dialog */}
+        <Dialog open={showCreateOrg} onOpenChange={setShowCreateOrg}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Organization</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateOrganization} className="space-y-4">
+              <Input
+                placeholder="Organization Name"
+                value={newOrganization.name}
+                onChange={(e) => setNewOrganization({ ...newOrganization, name: e.target.value })}
+                required
+              />
+              <Textarea
+                placeholder="Organization Description"
+                value={newOrganization.description}
+                onChange={(e) => setNewOrganization({ ...newOrganization, description: e.target.value })}
+                rows={3}
+              />
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setShowCreateOrg(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Create Organization
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Show organization management interface
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
-          <Building className="w-6 h-6 text-white" />
+    <div className="container mx-auto p-6 pt-24">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="outline"
+            onClick={() => setSelectedOrganization(null)}
+          >
+            ← Back to Organizations
+          </Button>
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+            <Building className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">{selectedOrganization.name}</h1>
+            <p className="text-muted-foreground">{selectedOrganization.description}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold">Organization Space</h1>
-          <p className="text-muted-foreground">Manage your organization</p>
-        </div>
+        <Button variant="outline">
+          <Settings className="h-4 w-4 mr-2" />
+          Organization Settings
+        </Button>
       </div>
 
       <div className="space-y-8">
@@ -214,7 +377,7 @@ export default function OrganizationSpace() {
                             {roleInfo.label}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                            Teams: {member.teams.join(', ')}
+                            Teams: {member.teams.join(', ') || 'None'}
                           </span>
                         </div>
                       </div>
