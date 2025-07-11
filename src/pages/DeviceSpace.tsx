@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -37,11 +38,23 @@ const getDevices = async () => {
   });
 };
 
+interface Team {
+  _id: string;
+  name: string;
+  members: string[];
+}
+
+interface Device {
+  _id: string;
+  name: string;
+  teamId: string;
+}
+
 export default function DeviceSpace() {
   const { user } = useAuth();
-  const [teams, setTeams] = useState([]);
-  const [devices, setDevices] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
   const [newDeviceName, setNewDeviceName] = useState('');
@@ -55,9 +68,8 @@ export default function DeviceSpace() {
           getDevices()
         ]);
         
-        // Properly type the responses
-        const teamsData = (teamsResponse as any)?.teams || [];
-        const devicesData = (devicesResponse as any)?.devices || [];
+        const teamsData = teamsResponse.teams || [];
+        const devicesData = devicesResponse.devices || [];
         
         setTeams(teamsData);
         setDevices(devicesData);
@@ -74,7 +86,7 @@ export default function DeviceSpace() {
     };
 
     fetchData();
-  }, [toast]);
+  }, []);
 
   const handleTeamSelect = (teamId: string) => {
     setSelectedTeam(teamId);
@@ -92,10 +104,10 @@ export default function DeviceSpace() {
   const handleAddDevice = () => {
     if (newDeviceName.trim() !== '') {
       // Simulate adding a new device
-      const newDevice = {
+      const newDevice: Device = {
         _id: `device${devices.length + 1}`,
         name: newDeviceName,
-        teamId: selectedTeam,
+        teamId: selectedTeam || '',
       };
       setDevices([...devices, newDevice]);
       handleCloseAddDeviceModal();
@@ -111,6 +123,9 @@ export default function DeviceSpace() {
       });
     }
   };
+
+  // Check if user has admin privileges (team-lead or organization-lead)
+  const isAdmin = user?.role === 'team-lead' || user?.role === 'organization-lead';
 
   if (loading) {
     return (
@@ -148,7 +163,7 @@ export default function DeviceSpace() {
                 <Users className="h-5 w-5 text-[hsl(var(--brand-success))]" />
                 Your Teams
               </CardTitle>
-              {user?.role === 'admin' && (
+              {isAdmin && (
                 <Button size="sm" className="brand-success">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Team
@@ -158,8 +173,8 @@ export default function DeviceSpace() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {Array.isArray(teams) && teams.length > 0 ? (
-                teams.map((team: any) => (
+              {teams.length > 0 ? (
+                teams.map((team) => (
                   <Button
                     key={team._id}
                     variant={selectedTeam === team._id ? "default" : "ghost"}
@@ -172,7 +187,7 @@ export default function DeviceSpace() {
                     <div className="flex flex-col items-start">
                       <span className="font-medium">{team.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {Array.isArray(team.members) ? team.members.length : 0} members
+                        {team.members.length} members
                       </span>
                     </div>
                   </Button>
@@ -204,14 +219,14 @@ export default function DeviceSpace() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.isArray(devices) && devices.length > 0 ? (
+                {devices.length > 0 ? (
                   devices
-                    .filter((device: any) => device.teamId === selectedTeam)
-                    .map((device: any) => (
+                    .filter((device) => device.teamId === selectedTeam)
+                    .map((device) => (
                       <TableRow key={device._id}>
                         <TableCell className="font-medium">{device.name}</TableCell>
                         <TableCell>
-                          {teams.find((team: any) => team._id === device.teamId)?.name || 'Unknown'}
+                          {teams.find((team) => team._id === device.teamId)?.name || 'Unknown'}
                         </TableCell>
                       </TableRow>
                     ))
