@@ -1,11 +1,13 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AppSidebar } from "@/components/AppSidebar";
 import { Navbar } from "@/components/Navbar";
+import { MemberPanel } from "@/components/MemberPanel";
 import Home from "./pages/Home";
 import TeamSpace from "./pages/TeamSpace";
 import DeviceSpace from "./pages/DeviceSpace";
@@ -18,84 +20,36 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Protected Route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-// App content component that uses auth context
-const AppContent = () => {
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="pt-4">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/team-space" element={
-              <ProtectedRoute>
-                <TeamSpace />
-              </ProtectedRoute>
-            } />
-            <Route path="/device-space" element={
-              <ProtectedRoute>
-                <DeviceSpace />
-              </ProtectedRoute>
-            } />
-            <Route path="/compliance-space" element={
-              <ProtectedRoute>
-                <ComplianceSpace />
-              </ProtectedRoute>
-            } />
-            <Route path="/validation-space" element={
-              <ProtectedRoute>
-                <ValidationSpace />
-              </ProtectedRoute>
-            } />
-            <Route path="/reports-space" element={
-              <ProtectedRoute>
-                <ReportsSpace />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
-            <Route path="/organization-space" element={
-              <ProtectedRoute>
-                <Organization />
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
-  );
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <AppContent />
+        <BrowserRouter>
+          <SidebarProvider defaultOpen={false}>
+            <div className="min-h-screen flex w-full relative">
+              <AppSidebar />
+              <div className="flex-1 flex flex-col">
+                <Navbar />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/team-space" element={<TeamSpace />} />
+                    <Route path="/device-space" element={<DeviceSpace />} />
+                    <Route path="/compliance-space" element={<ComplianceSpace />} />
+                    <Route path="/validation-space" element={<ValidationSpace />} />
+                    <Route path="/reports-space" element={<ReportsSpace />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/organization-space" element={<Organization />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </div>
+              <MemberPanel />
+            </div>
+          </SidebarProvider>
+        </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

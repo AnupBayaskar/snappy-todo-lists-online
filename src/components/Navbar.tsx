@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoginDialog } from './LoginDialog';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -21,24 +20,22 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <Link 
               to="/" 
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">G</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <span className="text-white font-bold text-sm">C</span>
               </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-                Governer
-              </span>
+              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">CIS Compliance</span>
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild className="hover:bg-accent text-foreground">
+            <Button variant="ghost" size="sm" asChild className="hover:bg-accent">
               <a 
                 href="https://smartedge.in" 
                 target="_blank" 
@@ -56,7 +53,7 @@ export function Navbar() {
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={user?.avatar} alt={user?.name} />
-                      <AvatarFallback className="bg-green-500 text-white">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
                         {user?.name?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -69,7 +66,7 @@ export function Navbar() {
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
-                      <p className="text-xs leading-none text-green-600 font-medium capitalize">
+                      <p className="text-xs leading-none text-blue-600 font-medium capitalize">
                         {user?.role?.replace('-', ' ')}
                       </p>
                     </div>
@@ -89,10 +86,7 @@ export function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                onClick={() => setShowLogin(true)} 
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
+              <Button onClick={() => setShowLogin(true)} className="bg-primary hover:bg-primary/90">
                 <LogIn className="w-4 h-4 mr-2" />
                 Login
               </Button>
@@ -100,8 +94,6 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-
-      <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
     </>
   );
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,7 +113,7 @@ export default function DeviceSpace() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 pt-10">
+      <div className="container mx-auto p-6">
         <div className="space-y-6">
           <div className="h-8 bg-muted rounded animate-pulse" />
           <div className="grid gap-6">
@@ -135,7 +136,7 @@ export default function DeviceSpace() {
   }
 
   return (
-    <div className="container mx-auto p-6 pt-10">
+    <div className="container mx-auto p-6">
       <div className="flex items-center space-x-4 mb-8">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
           <Monitor className="w-6 h-6 text-white" />
