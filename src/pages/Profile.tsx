@@ -1,290 +1,272 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { User, Upload, HelpCircle, Eye, Settings } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Import the new components
-import UserInfoSection from '@/components/profile/UserInfoSection';
-import DevicesSection from '@/components/profile/DevicesSection';
-import ReportsSection from '@/components/profile/ReportsSection';
-import DeviceDetailsModal from '@/components/profile/DeviceDetailsModal';
-import DecommissionModal from '@/components/profile/DecommissionModal';
+// Mock data
+const mockUserTeams = [
+  { id: '1', name: 'Security Team', role: 'Team Lead' },
+  { id: '2', name: 'Compliance Board', role: 'Member' }
+];
 
-interface Device {
-  device_id: string;
-  uuid: string;
-  type: 'os' | 'service';
-  device_subtype: string;
-  ip_address: string;
-  machine_name: string;
-  description?: string;
-  owner_name?: string;
-  owner_phone?: string;
-  owner_email?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  status: 'active' | 'decommissioned';
-  decommissioned_on?: string;
-  decommissioned_by?: string;
-  decommission_details?: string;
+const mockUserConfigurations = [
+  {
+    id: '1',
+    name: 'Web Server Security Config',
+    date: '2024-01-15',
+    device: 'Web Server 01',
+    status: 'Validated'
+  },
+  {
+    id: '2',
+    name: 'Database Hardening',
+    date: '2024-01-12',
+    device: 'Database Server',
+    status: 'Pending'
+  },
+  {
+    id: '3',
+    name: 'Workstation Setup',
+    date: '2024-01-10',
+    device: 'John Laptop',
+    status: 'Denied'
+  }
+];
 
-  // Report-specific properties (optional)
-  compliance?: number;
-  device?: string;
-  date?: string;
-  criticalIssues?: number;
-  mediumIssues?: number;
-}
+const rolePermissions = {
+  'member': {
+    title: 'Member',
+    permissions: [
+      'Create compliance configurations',
+      'Mark compliance controls',
+      'Submit configurations for validation',
+      'View own submissions and status'
+    ]
+  },
+  'validator': {
+    title: 'Validator',
+    permissions: [
+      'All member permissions',
+      'Validate compliance submissions',
+      'Review and approve configurations',
+      'Send queries back to members'
+    ]
+  },
+  'team-lead': {
+    title: 'Team Lead',
+    permissions: [
+      'All validator permissions',
+      'Manage team members',
+      'Assign roles within team',
+      'Generate team reports'
+    ]
+  },
+  'organization-lead': {
+    title: 'Organization Lead',
+    permissions: [
+      'All team lead permissions',
+      'Create and manage teams',
+      'Organization-wide oversight',
+      'User management across all teams'
+    ]
+  }
+};
 
-const Profile = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [showDeviceDetails, setShowDeviceDetails] = useState(false);
-  const [showDecommissionConfirm, setShowDecommissionConfirm] = useState(false);
-  const [decommissioningDevice, setDecommissioningDevice] = useState(false);
-  const API_BASE_URL = 'http://localhost:3000';
+export default function Profile() {
+  const { user } = useAuth();
+  const [showRoleInfo, setShowRoleInfo] = useState(false);
+  const [expandedConfigs, setExpandedConfigs] = useState(false);
 
-  useEffect(() => {
-    const fetchDevices = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(`${API_BASE_URL}/devices`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        setDevices(response.data as Device[]);
-      } catch (error: any) {
-        console.error('Error fetching devices:', error);
-        setDevices([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user) fetchDevices();
-  }, [user]);
-
-  const handleViewDetails = (device: Device) => {
-    console.log('Viewing details for device:', device);
-    setSelectedDevice(device);
-    setShowDeviceDetails(true);
+  const handleProfilePictureUpload = () => {
+    console.log('Profile picture upload clicked');
+    // Mock implementation
   };
 
-  const handleDecommissionDevice = async () => {
-    if (!selectedDevice) {
-      console.log('No device selected for decommission');
-      toast({
-        title: 'Error',
-        description: 'No device selected for decommissioning.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    console.log('Starting decommission process for device:', selectedDevice.device_id);
-    setDecommissioningDevice(true);
-    
-    try {
-      console.log('Making API call to decommission device');
-      
-      // Simulate successful decommission for now since we don't have a real backend
-      // In production, this would be a real API call
-      console.log('Simulating successful decommission API response');
+  return (
+    <div className="container mx-auto p-6">
+      <div className="flex items-center space-x-4 mb-8">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+          <User className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold">Profile</h1>
+          <p className="text-muted-foreground">Manage your profile and settings</p>
+        </div>
+      </div>
 
-      // Update the device in the local state
-      setDevices(prevDevices => {
-        const updatedDevices = prevDevices.map(device => 
-          device.device_id === selectedDevice.device_id 
-            ? { 
-                ...device, 
-                status: 'decommissioned' as const,
-                decommissioned_on: new Date().toISOString(),
-                decommissioned_by: user?.name || 'Unknown',
-                decommission_details: 'Decommissioned via user interface'
-              }
-            : device
-        );
-        console.log('Updated devices list:', updatedDevices);
-        return updatedDevices;
-      });
+      {/* Header Section */}
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-6">
+            {/* Profile Picture Upload */}
+            <div className="flex flex-col items-center space-y-3">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={user?.avatar} alt={user?.name} />
+                <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 text-2xl">
+                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleProfilePictureUpload}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Photo
+              </Button>
+            </div>
 
-      // Update selected device as well
-      setSelectedDevice(prev => {
-        if (!prev) return null;
-        const updatedDevice = {
-          ...prev,
-          status: 'decommissioned' as const,
-          decommissioned_on: new Date().toISOString(),
-          decommissioned_by: user?.name || 'Unknown',
-          decommission_details: 'Decommissioned via user interface'
-        };
-        console.log('Updated selected device:', updatedDevice);
-        return updatedDevice;
-      });
+            {/* Organization and Role Info */}
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-2">{user?.organizationName || 'SmartEdge Technologies'}</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <Badge 
+                  variant="secondary"
+                  className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                >
+                  {rolePermissions[user?.role]?.title || 'Member'}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowRoleInfo(true)}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p><strong>Name:</strong> {user?.name || 'John Doe'}</p>
+                <p><strong>Email:</strong> {user?.email || 'john.doe@smartedge.in'}</p>
+                <p><strong>User ID:</strong> {user?.id || 'USR-001'}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      toast({
-        title: 'Device Decommissioned',
-        description: `${selectedDevice.machine_name} has been successfully decommissioned.`,
-      });
-
-      setShowDecommissionConfirm(false);
-      
-    } catch (error: any) {
-      console.error('Decommission error:', error);
-      let errorMessage = 'Failed to decommission device.';
-      
-      if (error.response) {
-        // Server responded with error status
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
-        console.error('Server response error:', error.response.data);
-      } else if (error.request) {
-        // Request was made but no response received
-        errorMessage = 'Unable to connect to server. Please check your connection.';
-        console.error('Network error:', error.request);
-      } else {
-        // Something else happened
-        errorMessage = error.message || 'An unexpected error occurred.';
-        console.error('Unexpected error:', error.message);
-      }
-      
-      toast({
-        title: 'Decommission Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setDecommissioningDevice(false);
-    }
-  };
-
-  const handleDeleteDevice = async (deviceId: string) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/devices/${deviceId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-
-      setDevices(prevDevices => prevDevices.filter(device => device.device_id !== deviceId));
-      
-      if (selectedDevice && selectedDevice.device_id === deviceId) {
-        setSelectedDevice(null);
-        setShowDeviceDetails(false);
-      }
-
-      toast({
-        title: 'Device Deleted',
-        description: 'The device has been permanently deleted.',
-      });
-    } catch (error: any) {
-      console.error('Delete error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete device.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Redirect to login if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center section-padding">
-        <Card className="max-w-md w-full text-center">
+      {/* Two Column Layout */}
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Left Column: Your Teams */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-center space-x-2">
-              <AlertCircle className="h-6 w-6 text-amber-500" />
-              <span>Authentication Required</span>
-            </CardTitle>
-            <CardDescription>
-              Please log in to access your profile
-            </CardDescription>
+            <CardTitle>Your Teams</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate('/auth')} className="w-full">
-              Go to Login
-            </Button>
+            <div className="space-y-3">
+              {mockUserTeams.map((team) => (
+                <div
+                  key={team.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div>
+                    <h4 className="font-medium">{team.name}</h4>
+                    <p className="text-sm text-muted-foreground">Role: {team.role}</p>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 pt-4 border-t">
+              <Button variant="outline" className="w-full">
+                View Details
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Opens Team Space page
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right Column: Your Configurations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Configurations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`space-y-3 ${!expandedConfigs ? 'max-h-64 overflow-hidden' : ''}`}>
+              {mockUserConfigurations.map((config) => (
+                <div
+                  key={config.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium">{config.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Device: {config.device} • {config.date}
+                    </p>
+                    <Badge
+                      variant={
+                        config.status === 'Validated' ? 'default' :
+                        config.status === 'Denied' ? 'destructive' : 'secondary'
+                      }
+                      className={
+                        config.status === 'Validated' ? 'bg-green-100 text-green-800' : ''
+                      }
+                    >
+                      {config.status}
+                    </Badge>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Details
+                  </Button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t space-y-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setExpandedConfigs(!expandedConfigs)}
+              >
+                {expandedConfigs ? 'Show Less' : 'Read More'}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                {expandedConfigs ? 'Collapse view' : 'Expand to see all configurations'}
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen section-padding">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">User Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back, {user.name}
-            </p>
+      {/* Role Information Dialog */}
+      <Dialog open={showRoleInfo} onOpenChange={setShowRoleInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Role: {rolePermissions[user?.role]?.title || 'Member'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Permissions & Responsibilities:</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {(rolePermissions[user?.role]?.permissions || rolePermissions.member.permissions).map((permission, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-indigo-600 mt-1">•</span>
+                    <span>{permission}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="pt-4 border-t">
+              <Button onClick={() => setShowRoleInfo(false)} className="w-full">
+                Got it
+              </Button>
+            </div>
           </div>
-          <Button variant="outline" onClick={logout}>
-            Logout
-          </Button>
-        </div>
-
-        {/* User Information Section */}
-        <UserInfoSection 
-          user={user}
-          devicesCount={devices.length}
-          activeDevicesCount={devices.filter(d => d.status === 'active').length}
-        />
-
-        {/* User Devices Section */}
-        <DevicesSection 
-          devices={devices}
-          loading={loading}
-          onViewDetails={handleViewDetails}
-          onAddDevice={() => navigate('/compliance')}
-        />
-
-        {/* User Reports Section */}
-        <ReportsSection 
-          devices={devices}
-          onCreateReport={() => navigate('/compliance')}
-        />
-
-        {/* Device Details Modal */}
-        <DeviceDetailsModal
-          isOpen={showDeviceDetails}
-          device={selectedDevice}
-          onClose={() => {
-            setShowDeviceDetails(false);
-            setSelectedDevice(null);
-          }}
-          onDecommission={() => {
-            console.log('Opening decommission confirmation modal');
-            setShowDecommissionConfirm(true);
-          }}
-          onDelete={handleDeleteDevice}
-        />
-
-        {/* Decommission Confirmation Modal */}
-        <DecommissionModal
-          isOpen={showDecommissionConfirm}
-          deviceName={selectedDevice?.machine_name}
-          isLoading={decommissioningDevice}
-          onConfirm={() => {
-            console.log('User confirmed decommission');
-            handleDecommissionDevice();
-          }}
-          onCancel={() => {
-            console.log('User cancelled decommission');
-            setShowDecommissionConfirm(false);
-          }}
-        />
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default Profile;
+}
