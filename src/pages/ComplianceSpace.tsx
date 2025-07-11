@@ -1,36 +1,34 @@
 
-import { useState } from "react";
-import { ComplianceSelection } from "@/components/ComplianceSelection";
-import { ComplianceMarking } from "@/components/ComplianceMarking";
-import { useCompliance } from "@/hooks/useCompliance";
+import { useState } from "react"
+import { ComplianceSelection } from "@/components/ComplianceSelection"
+import { ComplianceMarking } from "@/components/ComplianceMarking"
+import { useCompliance } from "@/hooks/useCompliance"
 
 export default function ComplianceSpace() {
-  const [selectedTeam, setSelectedTeam] = useState("");
-  const [selectedDevice, setSelectedDevice] = useState("");
-  const [isMarkingMode, setIsMarkingMode] = useState(false);
-  const { teams, devices } = useCompliance();
+  const [selectedTeam, setSelectedTeam] = useState("")
+  const [selectedDevice, setSelectedDevice] = useState("")
+  const [isMarkingMode, setIsMarkingMode] = useState(false)
+  const { teams, devices } = useCompliance()
 
   const handleStartMarking = () => {
     if (selectedTeam && selectedDevice) {
-      console.log('Starting compliance marking for:', { selectedTeam, selectedDevice });
-      setIsMarkingMode(true);
+      console.log('Starting compliance marking for:', { selectedTeam, selectedDevice })
+      setIsMarkingMode(true)
     }
-  };
+  }
 
   const handleBackToSelection = () => {
-    setIsMarkingMode(false);
-  };
+    setIsMarkingMode(false)
+  }
 
   if (isMarkingMode) {
     return (
-      <div className="container mx-auto p-6">
-        <ComplianceMarking
-          teamId={selectedTeam}
-          deviceId={selectedDevice}
-          onBack={handleBackToSelection}
-        />
-      </div>
-    );
+      <ComplianceMarking
+        teamId={selectedTeam}
+        deviceId={selectedDevice}
+        onBack={handleBackToSelection}
+      />
+    )
   }
 
   return (
@@ -54,5 +52,5 @@ export default function ComplianceSpace() {
         />
       </div>
     </div>
-  );
+  )
 }

@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoginDialog } from './LoginDialog';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -28,22 +27,22 @@ export function Navbar() {
               to="/" 
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-green to-brand-green-light flex items-center justify-center">
-                <span className="text-white font-bold text-sm">G</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <span className="text-white font-bold text-sm">C</span>
               </div>
-              <span className="font-bold text-xl text-gradient">Governer</span>
+              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">CIS Compliance</span>
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="sm" asChild className="hover:bg-accent">
               <a 
-                href="https://example.com" 
+                href="https://smartedge.in" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2"
               >
-                <span>Parent Company</span>
+                <span>SmartEdge.in</span>
                 <ExternalLink className="w-4 h-4" />
               </a>
             </Button>
@@ -67,7 +66,7 @@ export function Navbar() {
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
-                      <p className="text-xs leading-none text-brand-green font-medium capitalize">
+                      <p className="text-xs leading-none text-blue-600 font-medium capitalize">
                         {user?.role?.replace('-', ' ')}
                       </p>
                     </div>
@@ -95,8 +94,6 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-
-      <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
     </>
   );
 }
