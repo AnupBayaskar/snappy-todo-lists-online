@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Monitor, Plus, Wifi, WifiOff, Server, Smartphone, Laptop } from 'lucide-react';
-import { toast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/useToast';
 
 // Mock data
 const mockTeams = [
@@ -45,22 +45,38 @@ const mockDevices = [
   }
 ];
 
+interface Device {
+  _id: string;
+  name: string;
+  type: string;
+  ipAddress: string;
+  status: 'online' | 'offline';
+  teamId: string;
+  lastSeen: string;
+}
+
+interface Team {
+  _id: string;
+  name: string;
+}
+
 export default function DeviceSpace() {
-  const [devices, setDevices] = useState(mockDevices);
-  const [teams, setTeams] = useState(mockTeams);
+  const [devices, setDevices] = useState<Device[]>(mockDevices);
+  const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [loading, setLoading] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', type: '', ipAddress: '', teamId: '' });
+  const { toast } = useToast();
 
-  const handleAddDevice = (e) => {
+  const handleAddDevice = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Adding new device:', newDevice);
     
-    const deviceToAdd = {
+    const deviceToAdd: Device = {
       _id: `device${devices.length + 1}`,
       ...newDevice,
-      status: 'online',
+      status: 'online' as const,
       lastSeen: new Date().toISOString()
     };
     
@@ -74,19 +90,19 @@ export default function DeviceSpace() {
     });
   };
 
-  const getDeviceIcon = (type) => {
+  const getDeviceIcon = (type: string) => {
     if (type.toLowerCase().includes('server')) return Server;
     if (type.toLowerCase().includes('mobile') || type.toLowerCase().includes('phone')) return Smartphone;
     if (type.toLowerCase().includes('laptop') || type.toLowerCase().includes('desktop')) return Laptop;
     return Monitor;
   };
 
-  const getTeamName = (teamId) => {
+  const getTeamName = (teamId: string) => {
     const team = teams.find(t => t._id === teamId);
     return team?.name || 'Unknown Team';
   };
 
-  const devicesByTeam = devices.reduce((acc, device) => {
+  const devicesByTeam = devices.reduce((acc: Record<string, Device[]>, device) => {
     const teamName = getTeamName(device.teamId);
     if (!acc[teamName]) {
       acc[teamName] = [];
