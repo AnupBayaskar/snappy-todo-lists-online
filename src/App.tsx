@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,7 +15,7 @@ import ComplianceSpace from "./pages/ComplianceSpace";
 import ValidationSpace from "./pages/ValidationSpace";
 import ReportsSpace from "./pages/ReportsSpace";
 import Profile from "./pages/Profile";
-import OrganizationSpace from "./pages/OrganizationSpace";
+import Organization from "./pages/Organization";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,7 +41,7 @@ const App = () => (
                     <Route path="/validation-space" element={<ValidationSpace />} />
                     <Route path="/reports-space" element={<ReportsSpace />} />
                     <Route path="/profile" element={<Profile />} />
-                    <Route path="/organization-space" element={<OrganizationSpace />} />
+                    <Route path="/organization-space" element={<Organization />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
