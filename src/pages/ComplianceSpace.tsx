@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,15 +81,17 @@ export default function ComplianceSpace() {
   };
 
   const getPriorityBadge = (priority: string) => {
-    const variants = {
-      'high': 'destructive',
-      'medium': 'default',
-      'low': 'secondary'
+    const priorityConfig = {
+      'high': { variant: 'destructive' as const, text: 'High' },
+      'medium': { variant: 'secondary' as const, text: 'Medium' },
+      'low': { variant: 'outline' as const, text: 'Low' }
     };
     
+    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig['medium'];
+    
     return (
-      <Badge variant={variants[priority as keyof typeof variants] || 'secondary'}>
-        {priority}
+      <Badge variant={config.variant}>
+        {config.text}
       </Badge>
     );
   };
@@ -110,7 +111,7 @@ export default function ComplianceSpace() {
   const compliancePercentage = Math.round((compliantItems / totalItems) * 100);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 pt-20">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Compliance Management</h1>
