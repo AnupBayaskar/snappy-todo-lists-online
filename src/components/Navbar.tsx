@@ -13,16 +13,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoginDialog } from '@/components/LoginDialog';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
-  const [showLoginDialog, setShowLoginDialog] = React.useState(false);
+  const [showLogin, setShowLogin] = React.useState(false);
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 h-full flex items-center justify-between">
+      <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <Link 
               to="/" 
@@ -31,14 +30,12 @@ export function Navbar() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">C</span>
               </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                CIS Compliance
-              </span>
+              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">CIS Compliance</span>
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
+            <Button variant="ghost" size="sm" asChild className="hover:bg-accent">
               <a 
                 href="https://smartedge.in" 
                 target="_blank" 
@@ -53,7 +50,7 @@ export function Navbar() {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-accent">
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={user?.avatar} alt={user?.name} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
@@ -82,17 +79,14 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                onClick={() => setShowLoginDialog(true)} 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
+              <Button onClick={() => setShowLogin(true)} className="bg-primary hover:bg-primary/90">
                 <LogIn className="w-4 h-4 mr-2" />
                 Login
               </Button>
@@ -100,11 +94,6 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-
-      <LoginDialog 
-        open={showLoginDialog} 
-        onOpenChange={setShowLoginDialog} 
-      />
     </>
   );
 }
