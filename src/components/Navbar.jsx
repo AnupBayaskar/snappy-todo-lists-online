@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { User, LogIn, ExternalLink } from 'lucide-react';
 
-const Navbar = ({ isLoggedIn = false, user = null }) => {
+export const Navbar = ({ isLoggedIn = false, user = null }) => {
   return (
     <nav className="fixed top-0 right-0 left-0 lg:left-80 z-30 glass-effect border-b border-border">
       <div className="flex items-center justify-between px-6 py-4">
@@ -44,5 +44,3 @@ const Navbar = ({ isLoggedIn = false, user = null }) => {
     </nav>
   );
 };
-
-export default Navbar;
