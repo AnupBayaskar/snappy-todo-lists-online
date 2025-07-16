@@ -1,3 +1,4 @@
+
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -54,7 +55,12 @@ export function AppSidebar() {
     navigation[navigation.length - 1],
   ];
 
-  const isActivePath = (path: string) => location.pathname === path;
+  const isActivePath = (path: string) => {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <aside
@@ -66,7 +72,7 @@ export function AppSidebar() {
       onMouseLeave={() => setExpanded(false)}
     >
       {/* Header */}
-      <div className="flex items-center justify-center p-4 border-b border-border">
+      <div className="flex items-center justify-center p-4 border-b border-border h-16">
         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
           <Shield className="w-6 h-6 text-primary-foreground" />
         </div>
@@ -76,13 +82,14 @@ export function AppSidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {allNavigation.map((item) => {
           const Icon = item.icon;
+          const isActive = isActivePath(item.href);
           return (
             <NavLink
               key={item.href}
               to={item.href}
               className={cn(
                 "flex items-center w-full h-12 rounded-xl transition-all duration-200 group relative",
-                isActivePath(item.href)
+                isActive
                   ? "bg-primary text-primary-foreground shadow-lg"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
