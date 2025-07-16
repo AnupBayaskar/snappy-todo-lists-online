@@ -5,35 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { User, Users, Monitor, Shield, CheckSquare, FileText, Building, Crown, Mail, Calendar } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const roleConfig = {
-  'organization-lead': { 
-    label: 'Organization Leader', 
-    icon: Crown, 
-    color: 'bg-primary/10 text-primary',
-    description: 'Full access to all organizational functions'
-  },
-  'team-lead': { 
-    label: 'Team Leader', 
-    icon: Shield, 
-    color: 'bg-secondary/10 text-secondary',
-    description: 'Manage team members and validate compliance'
-  },
-  'validator': { 
-    label: 'Validator', 
-    icon: CheckSquare, 
-    color: 'bg-green-500/10 text-green-600',
-    description: 'Validate compliance submissions'
-  },
-  'member': { 
-    label: 'Member', 
-    icon: User, 
-    color: 'bg-gray-500/10 text-gray-600',
-    description: 'Submit and track compliance configurations'
-  }
+// Simplified role config since we don't have role in current auth context
+const defaultRoleInfo = { 
+  label: 'User', 
+  icon: User, 
+  color: 'bg-gray-500/10 text-gray-600',
+  description: 'Platform user with access to compliance features'
 };
 
 export default function Profile() {
@@ -50,28 +31,18 @@ export default function Profile() {
     );
   }
 
-  const roleInfo = roleConfig[user.role] || roleConfig.member;
+  const roleInfo = defaultRoleInfo;
   const RoleIcon = roleInfo.icon;
 
   const getQuickActions = () => {
-    const actions = [
+    return [
       { name: 'Team Space', href: '/team-space', icon: Users, description: 'Manage your teams' },
       { name: 'Device Space', href: '/device-space', icon: Monitor, description: 'Configure devices' },
       { name: 'Compliance Space', href: '/compliance-space', icon: Shield, description: 'Mark compliance' },
       { name: 'Validation Space', href: '/validation-space', icon: CheckSquare, description: 'Validate submissions' },
       { name: 'Reports Space', href: '/reports-space', icon: FileText, description: 'Generate reports' },
+      { name: 'Organization Space', href: '/organization-space', icon: Building, description: 'Manage organizations' }
     ];
-
-    if (user.role === 'organization-lead') {
-      actions.push({
-        name: 'Organization Space',
-        href: '/organization-space',
-        icon: Building,
-        description: 'Manage organizations'
-      });
-    }
-
-    return actions;
   };
 
   return (
@@ -92,7 +63,7 @@ export default function Profile() {
           <Card className="glass-card">
             <CardHeader className="text-center">
               <Avatar className="h-24 w-24 mx-auto mb-4">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src="" alt={user.name} />
                 <AvatarFallback className="bg-primary/10 text-primary text-2xl">
                   {user.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
@@ -110,7 +81,7 @@ export default function Profile() {
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                <span>Member since registration</span>
               </div>
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
@@ -155,47 +126,45 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Additional Info for Org Leaders */}
-          {user.role === 'organization-lead' && (
-            <Card className="glass-card mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-primary" />
-                  Organization Leader Features
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">Create Organizations</h4>
-                      <p className="text-sm text-muted-foreground">Set up new organizational structures</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/organization-space')}
-                    >
-                      Manage
-                    </Button>
+          {/* Platform Features Info */}
+          <Card className="glass-card mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Platform Features
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">Compliance Management</h4>
+                    <p className="text-sm text-muted-foreground">Track and manage compliance across devices</p>
                   </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">Global Validation</h4>
-                      <p className="text-sm text-muted-foreground">Validate compliance across all teams</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/validation-space')}
-                    >
-                      Validate
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/compliance-space')}
+                  >
+                    Explore
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">Device Management</h4>
+                    <p className="text-sm text-muted-foreground">Configure and monitor device compliance</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/device-space')}
+                  >
+                    Manage
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
