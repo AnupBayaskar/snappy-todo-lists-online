@@ -1,5 +1,9 @@
-
-export type UserRole = 'member' | 'validator' | 'team-lead' | 'organization-lead';
+export type UserRole =
+  | "super-admin"
+  | "organization-lead"
+  | "team-lead"
+  | "validator"
+  | "member";
 
 export interface User {
   id: string;
@@ -17,5 +21,12 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role?: string,
+    organizationId?: string
+  ) => Promise<void>;
   loading: boolean;
 }

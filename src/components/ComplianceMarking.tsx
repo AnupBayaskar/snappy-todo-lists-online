@@ -1,18 +1,17 @@
 
-import { useState, useEffect } from "react"
-import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Badge } from "./ui/badge"
-import { Textarea } from "./ui/textarea"
-import { Label } from "./ui/label"
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Input } from "./ui/input"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
-import { ArrowLeft, ChevronDown, ChevronRight, Check, X, SkipForward, RotateCcw } from "lucide-react"
-import { useCompliance } from "@/hooks/useCompliance"
-import { useToast } from "@/hooks/useToast"
+import React, { useState } from 'react'
+import { ArrowLeft, Check, X, SkipForward, Shield, RotateCcw, Save, CheckCircle2, ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { useCompliance, ComplianceTeam, ComplianceDevice, ComplianceControl } from '@/hooks/useCompliance'
+import { cn } from '@/lib/utils'
 
 interface ComplianceMarkingProps {
   teamId: string
@@ -20,173 +19,198 @@ interface ComplianceMarkingProps {
   onBack: () => void
 }
 
-interface ControlMarking {
+interface ComplianceMarking {
   controlId: string
-  status: 'pass' | 'fail' | 'skip' | 'reset' | ''
+  type: 'pass' | 'fail' | 'skip'
   explanation: string
-  notes: string
+  comments: string
+  timestamp: string
 }
 
 export function ComplianceMarking({ teamId, deviceId, onBack }: ComplianceMarkingProps) {
-  const { controls, teams, devices } = useCompliance()
-  const { toast } = useToast()
-  const [selectedControlIndex, setSelectedControlIndex] = useState(0)
-  const [markings, setMarkings] = useState<Record<string, ControlMarking>>({})
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
-  const [configName, setConfigName] = useState("")
-  const [configComments, setConfigComments] = useState("")
+  const [selectedControl, setSelectedControl] = useState<ComplianceControl | null>(null)
+  const [markings, setMarkings] = useState<Record<string, ComplianceMarking>>({})
+  const [currentMarkingType, setCurrentMarkingType] = useState<'pass' | 'fail' | 'skip' | ''>('')
+  const [currentExplanation, setCurrentExplanation] = useState('')
+  const [currentComments, setCurrentComments] = useState('')
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [configName, setConfigName] = useState('')
+  const [configComments, setConfigComments] = useState('')
+  const { teams, devices, controls } = useCompliance()
 
   const team = teams.find(t => t._id === teamId)
   const device = devices.find(d => d._id === deviceId)
-  const selectedControl = controls[selectedControlIndex]
 
-  // Group controls by section
-  const groupedControls = controls.reduce((acc, control, index) => {
+  const handleSaveConfiguration = () => {
+    if (!configName.trim()) {
+      return
+    }
+
+    console.log('Saving configuration:', {
+      name: configName,
+      comments: configComments,
+      teamId,
+      deviceId,
+      markings
+    })
+
+    setShowSaveDialog(false)
+    setConfigName('')
+    setConfigComments('')
+  }
+
+  const handleReset = () => {
+    setCurrentMarkingType('')
+    setCurrentExplanation('')
+    setCurrentComments('')
+  }
+
+  const handleResetAll = () => {
+    setMarkings({})
+    setSelectedControl(null)
+    setCurrentMarkingType('')
+    setCurrentExplanation('')
+    setCurrentComments('')
+  }
+
+  const controlsBySection = controls.reduce((acc, control) => {
     if (!acc[control.section]) {
       acc[control.section] = []
     }
-    acc[control.section].push({ ...control, index })
+    acc[control.section].push(control)
     return acc
-  }, {} as Record<string, any[]>)
+  }, {} as Record<string, ComplianceControl[]>)
 
-  const currentMarking = markings[selectedControl?._id] || {
-    controlId: selectedControl?.controlId || '',
-    status: '',
-    explanation: '',
-    notes: ''
-  }
+  const handleMarkCompliance = () => {
+    if (!selectedControl || !currentMarkingType || !currentExplanation.trim()) {
+      return
+    }
 
-  const handleMarkingChange = (field: keyof ControlMarking, value: string) => {
-    if (!selectedControl) return
+    const newMarking = {
+      controlId: selectedControl._id,
+      type: currentMarkingType,
+      explanation: currentExplanation.trim(),
+      comments: currentComments.trim(),
+      timestamp: new Date().toISOString()
+    }
 
     setMarkings(prev => ({
       ...prev,
-      [selectedControl._id]: {
-        ...currentMarking,
-        [field]: value
-      }
+      [selectedControl._id]: newMarking
     }))
-  }
 
-  const handleMarkCompliance = () => {
-    if (!currentMarking.status || !currentMarking.explanation.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a status and provide an explanation",
-        variant: "destructive"
-      })
-      return
-    }
-
-    console.log('Marking compliance for control:', selectedControl?.controlId)
-
-    // Move to next control
-    if (selectedControlIndex < controls.length - 1) {
-      setSelectedControlIndex(selectedControlIndex + 1)
-    }
-  }
-
-  const handleSaveConfiguration = async () => {
-    if (!configName.trim()) {
-      toast({
-        title: "Missing Configuration Name",
-        description: "Please provide a name for this configuration",
-        variant: "destructive"
-      })
-      return
-    }
-
-    try {
-      const controlsData = Object.entries(markings).map(([controlId, marking]) => ({
-        controlId,
-        ...marking
-      }))
-
-      console.log('Saving configuration:', {
-        name: configName,
-        teamId,
-        deviceId,
-        controls: controlsData,
-        comments: configComments
-      })
-
-      toast({
-        title: "Configuration Saved",
-        description: "Your compliance configuration has been submitted for validation",
-      })
-
-      setIsSaveModalOpen(false)
-      onBack()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save configuration",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pass':
-        return <Check className="h-4 w-4 text-green-600" />
-      case 'fail':
-        return <X className="h-4 w-4 text-red-600" />
-      case 'skip':
-        return <SkipForward className="h-4 w-4 text-yellow-600" />
-      case 'reset':
-        return <RotateCcw className="h-4 w-4 text-gray-600" />
-      default:
-        return null
-    }
+    // Clear current marking
+    handleReset()
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
-        {/* Left Column: Control Navigation */}
-        <Card className="glass-effect border-border/50 overflow-hidden">
-          <CardHeader className="pb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-fit mb-2"
-              onClick={onBack}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Selection
-            </Button>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Team: {team?.name}</p>
-              <p className="text-sm text-muted-foreground">Device: {device?.name}</p>
-              <p className="text-sm text-muted-foreground">Type: {device?.type}</p>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={onBack}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Selection
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">Compliance Marking</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {team?.name} - {device?.name} ({device?.type})
+                  </p>
+                </div>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-96 overflow-y-auto">
-              {Object.entries(groupedControls).map(([section, sectionControls]) => (
+            
+            <div className="flex items-center gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    Reset All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset All Markings</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to reset all compliance markings? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleResetAll} className="bg-destructive hover:bg-destructive/90">
+                      Reset All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
+              <Button
+                onClick={() => setShowSaveDialog(true)}
+                className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+                disabled={Object.keys(markings).length === 0}
+              >
+                <Save className="h-4 w-4" />
+                Save Configuration
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Column - Controls */}
+        <div className="w-1/3 border-r border-border bg-card">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold">Device & Benchmark Details</h2>
+            <div className="text-sm text-muted-foreground mt-1">
+              <div>Team: {team?.name}</div>
+              <div>Device: {device?.name}</div>
+              <div>Type: {device?.type}</div>
+            </div>
+          </div>
+          
+          <ScrollArea className="h-[calc(100vh-12rem)]">
+            <div className="p-4 space-y-4">
+              {Object.entries(controlsBySection).map(([section, sectionControls]) => (
                 <Collapsible key={section} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/50 border-b">
-                    <span className="font-medium text-sm">{section}</span>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-left bg-muted rounded-lg hover:bg-muted/80">
+                    <span className="font-medium">{section}</span>
                     <ChevronDown className="h-4 w-4" />
                   </CollapsibleTrigger>
-                  <CollapsibleContent>
+                  <CollapsibleContent className="mt-2 space-y-1">
                     {sectionControls.map((control) => {
                       const marking = markings[control._id]
+                      const isSelected = selectedControl?._id === control._id
+                      
                       return (
                         <button
                           key={control._id}
-                          className={`w-full text-left p-3 border-b hover:bg-muted/50 transition-colors ${
-                            selectedControlIndex === control.index ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                          }`}
-                          onClick={() => setSelectedControlIndex(control.index)}
+                          onClick={() => setSelectedControl(control)}
+                          className={cn(
+                            "w-full text-left p-2 rounded text-sm transition-colors flex items-center justify-between",
+                            isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                          )}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              {getStatusIcon(marking?.status || '')}
-                              <span className="text-sm">{control.controlId} {control.title}</span>
+                          <span>{control.controlId}</span>
+                          {marking && (
+                            <div className="flex items-center gap-1">
+                              {marking.type === 'pass' && <Check className="h-3 w-3 text-green-500" />}
+                              {marking.type === 'fail' && <X className="h-3 w-3 text-red-500" />}
+                              {marking.type === 'skip' && <SkipForward className="h-3 w-3 text-yellow-500" />}
                             </div>
-                          </div>
+                          )}
                         </button>
                       )
                     })}
@@ -194,235 +218,288 @@ export function ComplianceMarking({ teamId, deviceId, onBack }: ComplianceMarkin
                 </Collapsible>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Middle Column: Control Details */}
-        <Card className="glass-effect border-border/50 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-lg">{selectedControl?.controlId}</CardTitle>
-            <p className="text-sm font-medium">{selectedControl?.title}</p>
-            <Badge variant={selectedControl?.riskLevel === 'high' ? 'destructive' : selectedControl?.riskLevel === 'medium' ? 'default' : 'secondary'}>
-              {selectedControl?.riskLevel} risk
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4 overflow-y-auto max-h-96">
-            <div>
-              <h4 className="font-medium mb-2">Description</h4>
-              <p className="text-sm text-muted-foreground">{selectedControl?.description}</p>
-            </div>
-            
-            <div>
-              <h4 className="font-medium mb-2">Implementation Guidance</h4>
-              <p className="text-sm text-muted-foreground">{selectedControl?.implementation}</p>
-            </div>
-
-            <div>
-              <h4 className="font-medium mb-2">References</h4>
-              <div className="space-y-1">
-                {selectedControl?.references.map((ref, index) => (
-                  <Badge key={index} variant="outline" className="text-xs mr-2">
-                    {ref}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Right Column: Compliance Marking */}
-        <Card className="glass-effect border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Mark Compliance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Status Selection</Label>
-              <RadioGroup
-                value={currentMarking.status}
-                onValueChange={(value) => handleMarkingChange('status', value)}
-                className="flex flex-wrap gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pass" id="pass" />
-                  <Label htmlFor="pass" className="flex items-center space-x-1 cursor-pointer">
-                    <Check className="h-4 w-4 text-green-600" />
-                    <span>Pass</span>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="fail" id="fail" />
-                  <Label htmlFor="fail" className="flex items-center space-x-1 cursor-pointer">
-                    <X className="h-4 w-4 text-red-600" />
-                    <span>Fail</span>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="skip" id="skip" />
-                  <Label htmlFor="skip" className="flex items-center space-x-1 cursor-pointer">
-                    <SkipForward className="h-4 w-4 text-yellow-600" />
-                    <span>Skip</span>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="reset" id="reset" />
-                  <Label htmlFor="reset" className="flex items-center space-x-1 cursor-pointer">
-                    <RotateCcw className="h-4 w-4 text-gray-600" />
-                    <span>Reset</span>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div>
-              <Label htmlFor="explanation" className="text-sm font-medium">
-                Explanation (Required)
-              </Label>
-              <Textarea
-                id="explanation"
-                placeholder="Explain your compliance decision..."
-                value={currentMarking.explanation}
-                onChange={(e) => handleMarkingChange('explanation', e.target.value)}
-                className="mt-2"
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {currentMarking.explanation.length}/500 characters
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="notes" className="text-sm font-medium">
-                Additional Notes (Optional)
-              </Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional details..."
-                value={currentMarking.notes}
-                onChange={(e) => handleMarkingChange('notes', e.target.value)}
-                className="mt-2"
-                rows={2}
-              />
-            </div>
-
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedControlIndex(Math.max(0, selectedControlIndex - 1))}
-                disabled={selectedControlIndex === 0}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" className="flex-1">
-                    Mark Compliance
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-background">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Compliance Marking</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to mark this control as {currentMarking.status}?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleMarkCompliance}>
-                      Confirm
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedControlIndex(Math.min(controls.length - 1, selectedControlIndex + 1))}
-                disabled={selectedControlIndex === controls.length - 1}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              Control {selectedControlIndex + 1} of {controls.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Save Configuration Button */}
-        <div className="lg:col-span-3">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="lg" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-                Save Configuration
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-background">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Save Configuration</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Save your current compliance marking progress and submit for validation.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => setIsSaveModalOpen(true)}>
-                  Continue
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          </ScrollArea>
         </div>
 
-        {/* Save Configuration Modal */}
-        <Dialog open={isSaveModalOpen} onOpenChange={setIsSaveModalOpen}>
-          <DialogContent className="bg-background">
-            <DialogHeader>
-              <DialogTitle>Save Configuration</DialogTitle>
-              <DialogDescription>
-                Provide details for your compliance configuration
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="configName">Configuration Name (Required)</Label>
-                <Input
-                  id="configName"
-                  value={configName}
-                  onChange={(e) => setConfigName(e.target.value)}
-                  placeholder="Enter configuration name..."
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label htmlFor="configComments">Comments/Details</Label>
-                <Textarea
-                  id="configComments"
-                  value={configComments}
-                  onChange={(e) => setConfigComments(e.target.value)}
-                  placeholder="Additional information about this configuration..."
-                  className="mt-2"
-                  rows={4}
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleSaveConfiguration} className="flex-1">
-                  Save & Submit
-                </Button>
-                <Button variant="outline" onClick={() => setIsSaveModalOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
+        {/* Middle Column - Control Details */}
+        <div className="w-1/3 border-r border-border bg-card">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold">Control Details</h2>
+          </div>
+          
+          <ScrollArea className="h-[calc(100vh-12rem)]">
+            <div className="p-4">
+              {selectedControl ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">{selectedControl.controlId}</h3>
+                    <h4 className="font-medium text-base mt-1">{selectedControl.title}</h4>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-sm mb-2">Description</h5>
+                    <p className="text-sm text-muted-foreground">{selectedControl.description}</p>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-sm mb-2">Implementation</h5>
+                    <code className="text-xs bg-muted p-2 rounded block font-mono">
+                      {selectedControl.implementation}
+                    </code>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-sm mb-2">Risk Level</h5>
+                    <Badge className={cn(
+                      selectedControl.riskLevel === 'high' ? 'bg-red-500/10 text-red-600' :
+                      selectedControl.riskLevel === 'medium' ? 'bg-yellow-500/10 text-yellow-600' :
+                      'bg-green-500/10 text-green-600'
+                    )}>
+                      {selectedControl.riskLevel.toUpperCase()}
+                    </Badge>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-sm mb-2">References</h5>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedControl.references.map((ref, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {ref}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <Shield className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Select a control to view details</p>
+                </div>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </ScrollArea>
+        </div>
+
+        {/* Right Column - Marking Interface */}
+        <div className="w-1/3 bg-card">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold">Mark Compliance</h2>
+          </div>
+          
+          <div className="p-4 space-y-6">
+            {selectedControl ? (
+              <>
+                {/* Marking Options */}
+                <div>
+                  <h3 className="font-medium mb-3">Select Compliance Status</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={currentMarkingType === 'pass' ? 'default' : 'outline'}
+                      onClick={() => setCurrentMarkingType('pass')}
+                      className={cn(
+                        "flex items-center gap-2",
+                        currentMarkingType === 'pass' && "bg-green-600 hover:bg-green-700"
+                      )}
+                    >
+                      <Check className="h-4 w-4" />
+                      Pass
+                    </Button>
+                    <Button
+                      variant={currentMarkingType === 'fail' ? 'default' : 'outline'}
+                      onClick={() => setCurrentMarkingType('fail')}
+                      className={cn(
+                        "flex items-center gap-2",
+                        currentMarkingType === 'fail' && "bg-red-600 hover:bg-red-700"
+                      )}
+                    >
+                      <X className="h-4 w-4" />
+                      Fail
+                    </Button>
+                    <Button
+                      variant={currentMarkingType === 'skip' ? 'default' : 'outline'}
+                      onClick={() => setCurrentMarkingType('skip')}
+                      className={cn(
+                        "flex items-center gap-2",
+                        currentMarkingType === 'skip' && "bg-yellow-600 hover:bg-yellow-700"
+                      )}
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Skip
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Explanation Field */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Explanation <span className="text-destructive">*</span>
+                  </label>
+                  <Textarea
+                    value={currentExplanation}
+                    onChange={(e) => setCurrentExplanation(e.target.value)}
+                    placeholder="Explain your compliance marking decision..."
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                {/* Comments Field */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Additional Comments
+                  </label>
+                  <Textarea
+                    value={currentComments}
+                    onChange={(e) => setCurrentComments(e.target.value)}
+                    placeholder="Any additional details or notes..."
+                    rows={2}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const controlIndex = controls.findIndex(c => c._id === selectedControl._id)
+                      if (controlIndex > 0) {
+                        setSelectedControl(controls[controlIndex - 1])
+                        handleReset()
+                      }
+                    }}
+                    disabled={!selectedControl || controls.findIndex(c => c._id === selectedControl._id) === 0}
+                  >
+                    Previous
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        className="bg-primary hover:bg-primary/90"
+                        disabled={!currentMarkingType || !currentExplanation.trim()}
+                      >
+                        Mark
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Compliance Marking</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to mark this control as "{currentMarkingType}"? 
+                          This will save your compliance decision.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleMarkCompliance} className="bg-primary hover:bg-primary/90">
+                          Confirm Mark
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const controlIndex = controls.findIndex(c => c._id === selectedControl._id)
+                      if (controlIndex < controls.length - 1) {
+                        setSelectedControl(controls[controlIndex + 1])
+                        handleReset()
+                      }
+                    }}
+                    disabled={!selectedControl || controls.findIndex(c => c._id === selectedControl._id) === controls.length - 1}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <CheckCircle2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Select a control to start marking</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Save Configuration Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Configuration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Configuration Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={configName}
+                onChange={(e) => setConfigName(e.target.value)}
+                placeholder="Enter configuration name..."
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Configuration Comments
+              </label>
+              <Textarea
+                value={configComments}
+                onChange={(e) => setConfigComments(e.target.value)}
+                placeholder="Additional details about this configuration..."
+                rows={3}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Marked Controls: {Object.keys(markings).length}</p>
+              <p>Total Controls: {controls.length}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowSaveDialog(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="bg-primary hover:bg-primary/90 flex-1"
+                  disabled={!configName.trim()}
+                >
+                  Save Configuration
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Save Configuration</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to save this configuration? It will be sent to the validation space for review.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSaveConfiguration} className="bg-primary hover:bg-primary/90">
+                    Save Configuration
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

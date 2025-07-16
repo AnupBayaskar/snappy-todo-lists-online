@@ -1,215 +1,375 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Server, 
-  Plus, 
-  Settings, 
-  Trash2, 
-  Edit, 
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Filter,
-  Search
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Monitor,
+  Plus,
+  Wifi,
+  WifiOff,
+  Server,
+  Smartphone,
+  Laptop,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// Mock data for devices
-const mockDevices = [
+// Mock data
+const mockTeams = [
+  { _id: "1", name: "Security Team" },
+  { _id: "2", name: "IT Operations" },
+];
+
+interface Device {
+  _id: string;
+  name: string;
+  type: string;
+  ipAddress: string;
+  status: "online" | "offline";
+  teamId: string;
+  lastSeen: string;
+}
+
+const mockDevices: Device[] = [
   {
-    id: 'dev-001',
-    name: 'Web Server - Production',
-    type: 'Server',
-    os: 'Ubuntu 22.04 LTS',
-    status: 'compliant',
-    lastScan: '2024-01-15T10:30:00Z',
-    complianceScore: 85,
-    criticalIssues: 0,
-    warnings: 3,
-    team: 'Security Team',
-    location: 'Data Center A'
+    _id: "1",
+    name: "Web Server",
+    type: "Ubuntu Server 20.04",
+    ipAddress: "192.168.1.100",
+    status: "online",
+    teamId: "1",
+    lastSeen: new Date().toISOString(),
   },
   {
-    id: 'dev-002',
-    name: 'Database Server - MySQL',
-    type: 'Database',
-    os: 'CentOS 8',
-    status: 'non-compliant',
-    lastScan: '2024-01-14T15:45:00Z',
-    complianceScore: 62,
-    criticalIssues: 2,
-    warnings: 8,
-    team: 'IT Operations',
-    location: 'Data Center B'
+    _id: "2",
+    name: "Database Server",
+    type: "CentOS 8",
+    ipAddress: "192.168.1.101",
+    status: "online",
+    teamId: "1",
+    lastSeen: new Date().toISOString(),
   },
   {
-    id: 'dev-003',
-    name: 'Firewall - Corporate',
-    type: 'Firewall',
-    os: 'FortiOS 7.0',
-    status: 'pending',
-    lastScan: '2024-01-10T08:00:00Z',
-    complianceScore: 78,
-    criticalIssues: 1,
-    warnings: 5,
-    team: 'Network Security',
-    location: 'Headquarters'
+    _id: "3",
+    name: "John Laptop",
+    type: "Windows 11 Pro",
+    ipAddress: "192.168.1.150",
+    status: "offline",
+    teamId: "2",
+    lastSeen: new Date(Date.now() - 86400000).toISOString(),
   },
-  {
-    id: 'dev-004',
-    name: 'Laptop - John Doe',
-    type: 'Endpoint',
-    os: 'Windows 11 Pro',
-    status: 'compliant',
-    lastScan: '2024-01-16T14:20:00Z',
-    complianceScore: 92,
-    criticalIssues: 0,
-    warnings: 1,
-    team: 'End Users',
-    location: 'Remote'
-  },
-  {
-    id: 'dev-005',
-    name: 'Cloud Instance - API',
-    type: 'Cloud',
-    os: 'Amazon Linux 2',
-    status: 'non-compliant',
-    lastScan: '2024-01-13T22:55:00Z',
-    complianceScore: 55,
-    criticalIssues: 3,
-    warnings: 12,
-    team: 'DevOps',
-    location: 'AWS Cloud'
-  }
 ];
 
 export default function DeviceSpace() {
-  const [devices, setDevices] = useState(mockDevices);
+  // const { user } = useAuth(); // Removed duplicate user declaration
+  const [devices, setDevices] = useState<Device[]>(mockDevices);
+  // Removed duplicate teams state, handled below
+  const [loading, setLoading] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [showDeviceDetails, setShowDeviceDetails] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [newDevice, setNewDevice] = useState({
-    name: '',
-    type: '',
-    os: '',
-    team: '',
-    location: ''
+    name: "",
+    type: "",
+    ipAddress: "",
+    teamId: "",
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'compliant':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" />Compliant</Badge>;
-      case 'non-compliant':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><AlertTriangle className="w-3 h-3 mr-1" />Non-Compliant</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      default:
-        return <Badge variant="secondary">Unknown</Badge>;
-    }
-  };
-
-  const handleAddDevice = (e) => {
+  const handleAddDevice = (e: React.FormEvent) => {
     e.preventDefault();
-    const newDeviceId = `dev-${Date.now()}`;
-    const newDeviceData = {
-      id: newDeviceId,
-      name: newDevice.name,
-      type: newDevice.type,
-      os: newDevice.os,
-      status: 'pending',
-      lastScan: new Date().toISOString(),
-      complianceScore: 0,
-      criticalIssues: 0,
-      warnings: 0,
-      team: newDevice.team,
-      location: newDevice.location
-    };
-    setDevices([...devices, newDeviceData]);
+    console.log("Adding new device:", newDevice);
     setShowAddDevice(false);
-    setNewDevice({ name: '', type: '', os: '', team: '', location: '' });
+    setNewDevice({ name: "", type: "", ipAddress: "", teamId: "" });
   };
 
-  const handleRemoveDevice = (deviceId) => {
-    setDevices(devices.filter(device => device.id !== deviceId));
-    setShowDeviceDetails(false);
+  const getDeviceIcon = (type: string) => {
+    if (type.toLowerCase().includes("server")) return Server;
+    if (
+      type.toLowerCase().includes("mobile") ||
+      type.toLowerCase().includes("phone")
+    )
+      return Smartphone;
+    if (
+      type.toLowerCase().includes("laptop") ||
+      type.toLowerCase().includes("desktop")
+    )
+      return Laptop;
+    return Monitor;
+  };
+  const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
+  const getTeamName = (teamId: string) => {
+    const team = teams.find((t) => t._id === teamId);
+    return team?.name || "Unknown Team";
   };
 
-  const filteredDevices = devices.filter(device =>
-    device.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterStatus === 'all' || device.status === filterStatus)
-  );
+  // Fetch organizations for the user (like OrganizationSpace)
+  const [organizations, setOrganizations] = useState<
+    { _id: string; name: string }[]
+  >([]);
+  const [selectedOrg, setSelectedOrg] = useState<{
+    _id: string;
+    name: string;
+  } | null>(null);
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setFilterStatus('all');
-  };
+  // You need to get the user object, for example from context or props
+  // Example using a placeholder for user and getToken (replace with your actual logic):
+  const user = { role: "organization-lead", email: "admin1@example.com" }; // TODO: Replace with real user context
+  const getToken = () => localStorage.getItem("governer-token");
+
+  React.useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        let url = "http://localhost:3000/organizations";
+        // If org admin, filter by admin email or id
+        console.log("hellow", user, user.role, user.email);
+        if (user && user.role === "organization-lead" && user.email) {
+          url += `?adminEmail=${encodeURIComponent(user.email)}`;
+        }
+        console.log("[OrganizationSpace] Fetching organizations from:", url);
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        });
+        if (!res.ok) {
+          throw new Error("Failed to fetch organizations");
+        }
+        const orgs = await res.json();
+        console.log("[OrganizationSpace] Organizations fetched:", orgs);
+        setOrganizations(orgs);
+      } catch (err) {
+        // Optionally show toast
+        console.error("[OrganizationSpace] Error fetching organizations:", err);
+      }
+    };
+    fetchOrganizations();
+    // Only refetch if user changes
+  }, []);
+  // Organization selection UI (like OrganizationSpace)
+  // Only show if user has more than one org
+  const renderOrgSelector = () =>
+    organizations.length > 1 ? (
+      <div className="mb-6">
+        <Select
+          value={selectedOrg?._id || ""}
+          onValueChange={(orgId) => {
+            const org = organizations.find((o) => o._id === orgId);
+            if (org) setSelectedOrg(org);
+          }}
+        >
+          <SelectTrigger className="w-72">
+            <SelectValue placeholder="Select Organization" />
+          </SelectTrigger>
+          <SelectContent>
+            {organizations.map((org) => (
+              <SelectItem key={org._id} value={org._id}>
+                {org.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ) : null;
+
+  // Fetch teams for selected organization (like OrganizationSpace)
+  useEffect(() => {
+    // if (!selectedOrg) return;
+    console.log("here", selectedOrg._id);
+    const fetchTeams = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `http://localhost:3000/teams?organization_id=${
+            selectedOrg._id || (selectedOrg as any).id
+          }`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("governer-token")}`,
+            },
+          }
+        );
+        if (!res.ok) throw new Error("Failed to fetch teams");
+        const data = await res.json();
+        setTeams(data);
+      } catch (err) {
+        setTeams([]);
+        // Optionally show toast
+        console.error("Error fetching teams:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTeams();
+  }, [selectedOrg]);
+  const devicesByTeam = devices.reduce((acc, device) => {
+    const teamName = getTeamName(device.teamId);
+    if (!acc[teamName]) {
+      acc[teamName] = [];
+    }
+    acc[teamName].push(device);
+    return acc;
+  }, {} as Record<string, Device[]>);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="space-y-6">
+          <div className="h-8 bg-muted rounded animate-pulse" />
+          <div className="grid gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="p-6">
+                <div className="space-y-4">
+                  <div className="h-6 bg-muted rounded animate-pulse" />
+                  <div className="grid grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, j) => (
+                      <div
+                        key={j}
+                        className="h-32 bg-muted rounded animate-pulse"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 pt-24">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-            <Server className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Device Management</h1>
-            <p className="text-muted-foreground">Monitor and manage your infrastructure devices</p>
-          </div>
+    <div className="container mx-auto p-6">
+      <div className="flex items-center space-x-4 mb-8">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+          <Monitor className="w-6 h-6 text-white" />
         </div>
-        <Button onClick={() => setShowAddDevice(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Device
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Device Space</h1>
+          <p className="text-muted-foreground">
+            Manage devices across your organization
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <Input
-            type="text"
-            placeholder="Search devices..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="compliant">Compliant</SelectItem>
-              <SelectItem value="non-compliant">Non-Compliant</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button variant="outline" size="sm" onClick={clearFilters}>
-          Clear Filters
-        </Button>
-      </div>
+      {renderOrgSelector()}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDevices.map(device => (
-          <Card key={device.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => { setSelectedDevice(device); setShowDeviceDetails(true); }}>
+      <div className="space-y-6">
+        {Object.entries(devicesByTeam).map(([teamName, teamDevices]) => (
+          <Card
+            key={teamName}
+            className="border hover:shadow-lg transition-all duration-300"
+          >
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Server className="w-4 h-4" />
-                <span>{device.name}</span>
+              <CardTitle className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <Monitor className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold">{teamName}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {teamDevices.length} devices
+                  </p>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Type: {device.type}</p>
-              <p className="text-sm text-muted-foreground">OS: {device.os}</p>
-              <div className="mt-2">{getStatusBadge(device.status)}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {teamDevices.map((device) => {
+                  const DeviceIcon = getDeviceIcon(device.type);
+                  return (
+                    <div
+                      key={device._id}
+                      className="p-4 rounded-xl border border-border hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedDevice(device)}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                          <DeviceIcon className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{device.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {device.type}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Status
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {device.status === "online" ? (
+                              <Wifi className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <WifiOff className="h-4 w-4 text-red-500" />
+                            )}
+                            <Badge
+                              variant={
+                                device.status === "online"
+                                  ? "default"
+                                  : "destructive"
+                              }
+                              className={
+                                device.status === "online"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                  : ""
+                              }
+                            >
+                              {device.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            IP
+                          </span>
+                          <span className="text-sm font-mono">
+                            {device.ipAddress}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-2 text-green-600 hover:bg-green-50"
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div
+                  className="p-4 rounded-xl border-2 border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
+                  onClick={() => {
+                    const team = teams.find((t) => t.name === teamName);
+                    if (team) {
+                      setNewDevice({ ...newDevice, teamId: team._id });
+                      setShowAddDevice(true);
+                    }
+                  }}
+                >
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                    <Plus className="h-6 w-6 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-green-600">
+                    Add Device
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -220,98 +380,137 @@ export default function DeviceSpace() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Device</DialogTitle>
-            <DialogDescription>Enter the details for the new device.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddDevice} className="space-y-4">
-            <div className="grid gap-2">
-              <Input
-                type="text"
-                placeholder="Device Name"
-                value={newDevice.name}
-                onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
-                required
-              />
+            <Input
+              placeholder="Device Name"
+              value={newDevice.name}
+              onChange={(e) =>
+                setNewDevice({ ...newDevice, name: e.target.value })
+              }
+              required
+            />
+            <Input
+              placeholder="Device Type (e.g., Ubuntu Server, Windows 10)"
+              value={newDevice.type}
+              onChange={(e) =>
+                setNewDevice({ ...newDevice, type: e.target.value })
+              }
+              required
+            />
+            <Input
+              placeholder="IP Address"
+              value={newDevice.ipAddress}
+              onChange={(e) =>
+                setNewDevice({ ...newDevice, ipAddress: e.target.value })
+              }
+              required
+            />
+            <Select
+              value={newDevice.teamId}
+              onValueChange={(value) =>
+                setNewDevice({ ...newDevice, teamId: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Team" />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map((team) => (
+                  <SelectItem key={team._id} value={team._id}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAddDevice(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1">
+                Add Device
+              </Button>
             </div>
-            <div className="grid gap-2">
-              <Select onValueChange={(value) => setNewDevice({ ...newDevice, type: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Device Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Server">Server</SelectItem>
-                  <SelectItem value="Database">Database</SelectItem>
-                  <SelectItem value="Firewall">Firewall</SelectItem>
-                  <SelectItem value="Endpoint">Endpoint</SelectItem>
-                  <SelectItem value="Cloud">Cloud Instance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Input
-                type="text"
-                placeholder="Operating System"
-                value={newDevice.os}
-                onChange={(e) => setNewDevice({ ...newDevice, os: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Input
-                type="text"
-                placeholder="Team"
-                value={newDevice.team}
-                onChange={(e) => setNewDevice({ ...newDevice, team: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Input
-                type="text"
-                placeholder="Location"
-                value={newDevice.location}
-                onChange={(e) => setNewDevice({ ...newDevice, location: e.target.value })}
-                required
-              />
-            </div>
-            <Button type="submit">Add Device</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Device Details Dialog */}
-      <Dialog open={!!selectedDevice && showDeviceDetails} onOpenChange={() => { setShowDeviceDetails(false); setSelectedDevice(null); }}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog
+        open={!!selectedDevice}
+        onOpenChange={() => setSelectedDevice(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Device Details</DialogTitle>
-            <DialogDescription>Information about the selected device.</DialogDescription>
           </DialogHeader>
           {selectedDevice && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Device Name</p>
-                <p className="text-muted-foreground">{selectedDevice.name}</p>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                  {(() => {
+                    const DeviceIcon = getDeviceIcon(selectedDevice.type);
+                    return <DeviceIcon className="h-8 w-8 text-green-600" />;
+                  })()}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {selectedDevice.name}
+                  </h3>
+                  <p className="text-muted-foreground">{selectedDevice.type}</p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Type</p>
-                <p className="text-muted-foreground">{selectedDevice.type}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedDevice.status === "online" ? (
+                      <Wifi className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <WifiOff className="h-4 w-4 text-red-500" />
+                    )}
+                    <Badge
+                      variant={
+                        selectedDevice.status === "online"
+                          ? "default"
+                          : "destructive"
+                      }
+                      className={
+                        selectedDevice.status === "online"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : ""
+                      }
+                    >
+                      {selectedDevice.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">IP Address</p>
+                  <p className="font-mono mt-1">{selectedDevice.ipAddress}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Team</p>
+                  <p className="mt-1">{getTeamName(selectedDevice.teamId)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last Seen</p>
+                  <p className="mt-1">
+                    {new Date(selectedDevice.lastSeen).toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Operating System</p>
-                <p className="text-muted-foreground">{selectedDevice.os}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Status</p>
-                {getStatusBadge(selectedDevice.status)}
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => alert('Edit functionality not implemented.')}>
-                  <Edit className="w-4 h-4 mr-2" />
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1">
                   Edit Device
                 </Button>
-                <Button variant="destructive" onClick={() => handleRemoveDevice(selectedDevice.id)}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Remove Device
+                <Button variant="destructive" className="flex-1">
+                  Decommission
                 </Button>
               </div>
             </div>
@@ -320,4 +519,7 @@ export default function DeviceSpace() {
       </Dialog>
     </div>
   );
+}
+function useAuth(): { user: any } {
+  throw new Error("Function not implemented.");
 }
