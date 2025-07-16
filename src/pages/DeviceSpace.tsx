@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,7 @@ import {
   Smartphone,
   Laptop,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-// Mock data
-const mockTeams = [
-  { _id: "1", name: "Security Team" },
-  { _id: "2", name: "IT Operations" },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Device {
   _id: string;
@@ -41,6 +36,16 @@ interface Device {
   status: "online" | "offline";
   teamId: string;
   lastSeen: string;
+}
+
+interface Team {
+  _id: string;
+  name: string;
+}
+
+interface Organization {
+  _id: string;
+  name: string;
 }
 
 const mockDevices: Device[] = [
@@ -73,10 +78,17 @@ const mockDevices: Device[] = [
   },
 ];
 
+const mockTeams: Team[] = [
+  { _id: "1", name: "Security Team" },
+  { _id: "2", name: "IT Operations" },
+];
+
 export default function DeviceSpace() {
-  // const { user } = useAuth(); // Removed duplicate user declaration
+  const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>(mockDevices);
-  // Removed duplicate teams state, handled below
+  const [teams, setTeams] = useState<Team[]>(mockTeams);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -87,9 +99,37 @@ export default function DeviceSpace() {
     teamId: "",
   });
 
+  // Fetch organizations on component mount
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const mockOrgs = [
+          { _id: "1", name: "SmartEdge Technologies" },
+          { _id: "2", name: "Security Corp" }
+        ];
+        setOrganizations(mockOrgs);
+        if (mockOrgs.length > 0) {
+          setSelectedOrg(mockOrgs[0]);
+        }
+      } catch (err) {
+        console.error("Error fetching organizations:", err);
+      }
+    };
+    fetchOrganizations();
+  }, []);
+
   const handleAddDevice = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Adding new device:", newDevice);
+    const device: Device = {
+      _id: Date.now().toString(),
+      name: newDevice.name,
+      type: newDevice.type,
+      ipAddress: newDevice.ipAddress,
+      status: "online",
+      teamId: newDevice.teamId,
+      lastSeen: new Date().toISOString(),
+    };
+    setDevices([...devices, device]);
     setShowAddDevice(false);
     setNewDevice({ name: "", type: "", ipAddress: "", teamId: "" });
   };
@@ -108,111 +148,12 @@ export default function DeviceSpace() {
       return Laptop;
     return Monitor;
   };
-  const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
+
   const getTeamName = (teamId: string) => {
     const team = teams.find((t) => t._id === teamId);
     return team?.name || "Unknown Team";
   };
 
-  // Fetch organizations for the user (like OrganizationSpace)
-  const [organizations, setOrganizations] = useState<
-    { _id: string; name: string }[]
-  >([]);
-  const [selectedOrg, setSelectedOrg] = useState<{
-    _id: string;
-    name: string;
-  } | null>(null);
-
-  // You need to get the user object, for example from context or props
-  // Example using a placeholder for user and getToken (replace with your actual logic):
-  const user = { role: "organization-lead", email: "admin1@example.com" }; // TODO: Replace with real user context
-  const getToken = () => localStorage.getItem("governer-token");
-
-  React.useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        let url = "http://localhost:3000/organizations";
-        // If org admin, filter by admin email or id
-        console.log("hellow", user, user.role, user.email);
-        if (user && user.role === "organization-lead" && user.email) {
-          url += `?adminEmail=${encodeURIComponent(user.email)}`;
-        }
-        console.log("[OrganizationSpace] Fetching organizations from:", url);
-        const res = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
-        });
-        if (!res.ok) {
-          throw new Error("Failed to fetch organizations");
-        }
-        const orgs = await res.json();
-        console.log("[OrganizationSpace] Organizations fetched:", orgs);
-        setOrganizations(orgs);
-      } catch (err) {
-        // Optionally show toast
-        console.error("[OrganizationSpace] Error fetching organizations:", err);
-      }
-    };
-    fetchOrganizations();
-    // Only refetch if user changes
-  }, []);
-  // Organization selection UI (like OrganizationSpace)
-  // Only show if user has more than one org
-  const renderOrgSelector = () =>
-    organizations.length > 1 ? (
-      <div className="mb-6">
-        <Select
-          value={selectedOrg?._id || ""}
-          onValueChange={(orgId) => {
-            const org = organizations.find((o) => o._id === orgId);
-            if (org) setSelectedOrg(org);
-          }}
-        >
-          <SelectTrigger className="w-72">
-            <SelectValue placeholder="Select Organization" />
-          </SelectTrigger>
-          <SelectContent>
-            {organizations.map((org) => (
-              <SelectItem key={org._id} value={org._id}>
-                {org.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    ) : null;
-
-  // Fetch teams for selected organization (like OrganizationSpace)
-  useEffect(() => {
-    // if (!selectedOrg) return;
-    console.log("here", selectedOrg._id);
-    const fetchTeams = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `http://localhost:3000/teams?organization_id=${
-            selectedOrg._id || (selectedOrg as any).id
-          }`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("governer-token")}`,
-            },
-          }
-        );
-        if (!res.ok) throw new Error("Failed to fetch teams");
-        const data = await res.json();
-        setTeams(data);
-      } catch (err) {
-        setTeams([]);
-        // Optionally show toast
-        console.error("Error fetching teams:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTeams();
-  }, [selectedOrg]);
   const devicesByTeam = devices.reduce((acc, device) => {
     const teamName = getTeamName(device.teamId);
     if (!acc[teamName]) {
@@ -263,7 +204,28 @@ export default function DeviceSpace() {
         </div>
       </div>
 
-      {renderOrgSelector()}
+      {organizations.length > 1 && (
+        <div className="mb-6">
+          <Select
+            value={selectedOrg?._id || ""}
+            onValueChange={(orgId) => {
+              const org = organizations.find((o) => o._id === orgId);
+              if (org) setSelectedOrg(org);
+            }}
+          >
+            <SelectTrigger className="w-72">
+              <SelectValue placeholder="Select Organization" />
+            </SelectTrigger>
+            <SelectContent>
+              {organizations.map((org) => (
+                <SelectItem key={org._id} value={org._id}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-6">
         {Object.entries(devicesByTeam).map(([teamName, teamDevices]) => (
@@ -519,7 +481,4 @@ export default function DeviceSpace() {
       </Dialog>
     </div>
   );
-}
-function useAuth(): { user: any } {
-  throw new Error("Function not implemented.");
 }
