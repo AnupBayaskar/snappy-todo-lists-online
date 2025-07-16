@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, LogIn, User, LogOut } from "lucide-react";
@@ -21,17 +20,17 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-20 right-0 z-40 w-auto border-b border-border/50 bg-background/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <Link
               to="/"
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <span className="font-bold text-xl text-white">GRC</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-green to-brand-green-light flex items-center justify-center">
+                <span className="font-bold text-xl text-gradient">GRC</span>
               </div>
-              <span className="text-foreground font-bold text-sm">TRAILS</span>
+              <span className=" text-white font-bold text-sm">TRAILS</span>
             </Link>
           </div>
 
@@ -40,15 +39,15 @@ export function Navbar() {
               variant="ghost"
               size="sm"
               asChild
-              className="hover:bg-accent text-foreground"
+              className="hover:bg-accent"
             >
               <a
-                href="https://smartedge.in"
+                href="https://example.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2"
               >
-                <span>SmartEdge.in</span>
+                <span>Parent Company</span>
                 <ExternalLink className="w-4 h-4" />
               </a>
             </Button>
@@ -77,7 +76,7 @@ export function Navbar() {
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
-                      <p className="text-xs leading-none text-green-600 font-medium capitalize">
+                      <p className="text-xs leading-none text-brand-green font-medium capitalize">
                         {user?.role?.replace("-", " ")}
                       </p>
                     </div>

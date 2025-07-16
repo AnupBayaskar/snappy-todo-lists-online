@@ -78,7 +78,7 @@ const ComplianceDetails = () => {
   };
 
   const handleBack = () => {
-    navigate('/compliance-space');
+    navigate('/compliance');
   };
 
   const handlePrevious = () => {
@@ -96,14 +96,13 @@ const ComplianceDetails = () => {
     console.log('Next clicked');
   };
 
-  // Remove role check since current auth context doesn't have role property
-  if (!user) {
+  if (!user || user.role !== 'user') {
     return (
       <div className="min-h-screen section-padding flex items-center justify-center">
         <Card className="p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <h2 className="text-2xl font-bold mb-4">Access Restricted</h2>
           <p className="text-muted-foreground">
-            Please log in to access compliance details.
+            This page is only accessible to users with the appropriate role.
           </p>
         </Card>
       </div>
